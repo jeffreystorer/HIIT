@@ -20,8 +20,8 @@ document.addEventListener('DOMContentLoaded', function() {
         sets: { min: 1, max: 10 },
         reps: { min: 1, max: 20 },
         hold: { min: 1, max: 30 },
-        rest: { min: 1, max: 30 },
-        recover: { min: 1, max: 60 }
+        rest: { min: 0, max: 30 },
+        recover: { min: 0, max: 60 }
     };
 
     const phaseColors = {
@@ -131,11 +131,11 @@ document.addEventListener('DOMContentLoaded', function() {
         for (let s = 1; s <= sets; s++) {
             for (let r = 1; r <= reps; r++) {
                 seq.push({ type: 'hold', set: s, rep: r, duration: hold });
-                if (r < reps) {
+                if (r < reps && rest > 0) {
                     seq.push({ type: 'rest', set: s, rep: r, duration: rest });
                 }
             }
-            if (s < sets) {
+            if (s < sets && recover > 0) {
                 seq.push({ type: 'recover', set: s, rep: reps, duration: recover });
             }
         }
