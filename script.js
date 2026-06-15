@@ -146,6 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.stepper button, .stepper input').forEach(el => {
             el.disabled = disabled;
         });
+        document.getElementById('set-default').disabled = disabled;
     }
 
     function loadStep(index) {
@@ -222,6 +223,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    const defaultStorageKey = 'hiitTimerDefaults';
+
     const defaults = {
         sets: 2,
         reps: 2,
@@ -229,6 +232,37 @@ document.addEventListener('DOMContentLoaded', function() {
         rest: 4,
         recover: 30
     };
+
+    function loadSavedDefaults() {
+        try {
+            const saved = localStorage.getItem(defaultStorageKey);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                Object.keys(defaults).forEach(key => {
+                    if (typeof parsed[key] === 'number' &&
+                        parsed[key] >= limits[key].min &&
+                        parsed[key] <= limits[key].max) {
+                        defaults[key] = parsed[key];
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('Error loading saved defaults:', e);
+        }
+    }
+
+    function saveDefaults() {
+        Object.keys(defaults).forEach(key => {
+            defaults[key] = parseInt(inputs[key].value, 10);
+        });
+        try {
+            localStorage.setItem(defaultStorageKey, JSON.stringify(defaults));
+        } catch (e) {
+            console.error('Error saving defaults:', e);
+        }
+    }
+
+    loadSavedDefaults();
 
     function resetTimer() {
         clearInterval(timerInterval);
@@ -294,6 +328,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Event Listeners
     startStopBtn.addEventListener('click', startStopHandler);
     resetBtn.addEventListener('click', resetTimer);
+
+    const setDefaultBtn = document.getElementById('set-default');
+    setDefaultBtn.addEventListener('click', () => {
+        if (isRunning || isPaused) return;
+        saveDefaults();
+        const original = setDefaultBtn.textContent;
+        setDefaultBtn.textContent = 'Saved!';
+        setTimeout(() => {
+            setDefaultBtn.textContent = original;
+        }, 1000);
+    });
 
     // Update preview circle color when Hold value changes (pre-start)
     inputs.hold.addEventListener('change', () => {

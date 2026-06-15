@@ -371,6 +371,27 @@ h1 {
     cursor: not-allowed;
 }
 
+.set-default-btn {
+    margin-top: 15px;
+    background-color: #d8b4f8;
+    color: #333;
+    box-shadow: 0 4px 0 #b794e8;
+    font-size: 1em;
+    padding: 10px 20px;
+}
+
+.set-default-btn:active {
+    box-shadow: 0 2px 0 #b794e8;
+}
+
+.set-default-btn:hover {
+    background-color: #e4c8fb;
+}
+
+.timer-running .set-default-btn {
+    display: none;
+}
+
 button {
     background-color: #ffd166;
     border: none;
