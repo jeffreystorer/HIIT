@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HIIT Timer</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>⏱️</text></svg>">
+</head>
+<body>
+    <div id="fauxBody">
+    <div class="container">
+
+        <div class="timer-display">
+            <div class="phase-label">Ready</div>
+            <div class="time">00:10</div>
+            <div class="progress-container">
+                <div class="progress-circle">
+                    <div class="progress-bar"></div>
+                    <div class="progress-content">
+                        <div class="status-text">
+                            <div class="set-rep-display">Set 1 / Rep 1</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="start-stop">Start</button>
+            <button id="reset">Reset</button>
+        </div>
+
+        <div class="settings">
+            <div class="setting-row">
+                <label>Sets</label>
+                <div class="stepper">
+                    <button class="step-down" data-target="sets">-</button>
+                    <input type="number" id="sets" min="1" max="10" value="2" readonly>
+                    <button class="step-up" data-target="sets">+</button>
+                </div>
+            </div>
+            <div class="setting-row">
+                <label>Reps</label>
+                <div class="stepper">
+                    <button class="step-down" data-target="reps">-</button>
+                    <input type="number" id="reps" min="1" max="20" value="2" readonly>
+                    <button class="step-up" data-target="reps">+</button>
+                </div>
+            </div>
+            <div class="setting-row">
+                <label>Hold (sec)</label>
+                <div class="stepper">
+                    <button class="step-down" data-target="hold">-</button>
+                    <input type="number" id="hold" min="1" max="30" value="10" readonly>
+                    <button class="step-up" data-target="hold">+</button>
+                </div>
+            </div>
+            <div class="setting-row">
+                <label>Rest (sec)</label>
+                <div class="stepper">
+                    <button class="step-down" data-target="rest">-</button>
+                    <input type="number" id="rest" min="1" max="30" value="4" readonly>
+                    <button class="step-up" data-target="rest">+</button>
+                </div>
+            </div>
+            <div class="setting-row">
+                <label>Recover (sec)</label>
+                <div class="stepper">
+                    <button class="step-down" data-target="recover">-</button>
+                    <input type="number" id="recover" min="1" max="60" value="30" readonly>
+                    <button class="step-up" data-target="recover">+</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

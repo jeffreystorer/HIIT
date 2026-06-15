@@ -1,0 +1,456 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100vh;
+}
+
+body {
+    font-family: 'Comic Sans MS', 'Arial Rounded MT', Arial, sans-serif;
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
+    width: 100%;
+    color: #333;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+}
+#fauxBody {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: auto;
+}
+
+/* Only apply fixed positioning when timer is running */
+.timer-running {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    height: 100vh;
+}
+
+.container {
+    background-color: white;
+    border-radius: 0;
+    padding: 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    width: 100%;
+    min-height: 100vh;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    overflow: auto;
+    justify-content: flex-start;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+h1 {
+    color: #ff6b6b;
+    margin-bottom: 30px;
+    font-size: 2.5em;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.timer-display {
+    margin: 0;
+    font-size: 6em;
+    position: relative;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.phase-label {
+    font-size: 0.3em;
+    font-weight: bold;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 5px;
+}
+
+.progress-container {
+    position: relative;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.progress-circle {
+    position: relative;
+    width: 85vmin;
+    height: 85vmin;
+    max-width: 100%;
+    max-height: 85vmin;
+    aspect-ratio: 1/1;
+    border-radius: 50%;
+    background: #f0f0f0;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px auto;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.progress-bar {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    /* Default color before start represents the first phase color, set via JS */
+    background: conic-gradient(var(--phase-color, #4caf50) 0%, var(--phase-color, #4caf50) 100%);
+    transition: background 0.3s ease;
+}
+
+.progress-content {
+    width: 80%;
+    height: 80%;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+    margin: 0 auto;
+}
+
+/* While running, expired portion turns red, remaining portion is the phase color */
+.timer-running .progress-bar {
+    background: conic-gradient(red var(--progress, 0%), var(--phase-color, #4caf50) var(--progress, 0%));
+    transition: background 1s linear;
+}
+
+.set-rep-display {
+    font-size: 0.3em;
+    font-weight: bold;
+    color: #4ecdc4;
+}
+
+/* Hide settings when timer is running */
+.timer-running .settings {
+    display: none;
+}
+
+/* Adjust layout when timer is running */
+.timer-running {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: white;
+    z-index: 1000;
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+.timer-running .container {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: white;
+    position: relative;
+    overflow: auto;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.timer-running .timer-display {
+    margin: 0;
+    padding: 5px 0;
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 2em;
+}
+
+.timer-running .progress-container {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: visible;
+    flex: 1;
+    box-sizing: border-box;
+}
+
+.timer-running .progress-circle {
+    aspect-ratio: 1/1;
+    margin: 0 0;
+    position: relative;
+}
+
+/* Adjust for landscape orientation */
+@media (orientation: landscape) {
+    .timer-running .progress-circle {
+        width: 70vmin;
+        height: 70vmin;
+    }
+
+    .timer-running .container {
+        padding: 5px;
+    }
+}
+
+/* iPad specific adjustments */
+@media (max-width: 767px) {
+    .container {
+        border-radius: 0;
+        padding: 10px;
+    }
+
+    .progress-circle {
+        width: 90vmin !important;
+        height: 90vmin !important;
+    }
+}
+
+@media only screen
+  and (min-device-width: 768px)
+  and (max-device-width: 1024px) {
+    .timer-running .progress-circle {
+        width: 60vmin;
+        height: 60vmin;
+    }
+
+    .timer-running .container {
+        padding: 5px;
+    }
+
+    .timer-running .timer-display {
+        padding: 0;
+        margin-bottom: 10px;
+    }
+}
+
+.timer-running .time {
+    font-size: 0.5em;
+}
+
+.timer-running .phase-label,
+.timer-running .set-rep-display {
+    font-size: 0.25em;
+}
+
+.time {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #4caf50;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    margin: 3px 0 8px;
+}
+
+.status-text {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+.controls {
+    margin: 20px 0 15px;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 10px;
+}
+
+/* Settings panel with steppers */
+.settings {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 320px;
+}
+
+.setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.setting-row label {
+    font-weight: bold;
+    color: #666;
+    font-size: 1em;
+}
+
+.stepper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stepper input[type="number"] {
+    width: 50px;
+    text-align: center;
+    font-size: 1.1em;
+    font-weight: bold;
+    border: 2px solid #c8e6c9;
+    border-radius: 10px;
+    padding: 6px 4px;
+    font-family: inherit;
+    color: #333;
+    background-color: #f9fff9;
+    -moz-appearance: textfield;
+}
+
+.stepper input[type="number"]::-webkit-outer-spin-button,
+.stepper input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.stepper button {
+    background-color: #c8e6c9;
+    box-shadow: 0 3px 0 #a5d6a7;
+    padding: 8px 14px;
+    font-size: 1em;
+    min-width: 20px;
+    line-height: 1;
+}
+
+.stepper button:active {
+    box-shadow: 0 1px 0 #a5d6a7;
+}
+
+.stepper button:hover {
+    background-color: #d8f0d8;
+}
+
+.stepper button:disabled,
+.stepper input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+button {
+    background-color: #ffd166;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 50px;
+    font-size: 1.1em;
+    cursor: pointer;
+    color: #333;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 0 #e6b84c;
+    position: relative;
+    overflow: hidden;
+}
+
+button:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #e6b84c;
+}
+
+button:hover {
+    background-color: #ffde82;
+}
+
+#start-stop {
+    background-color: #4ecdc4;
+    color: white;
+    font-size: 1.3em;
+    padding: 15px 40px;
+    box-shadow: 0 4px 0 #3db8b0;
+}
+
+#start-stop:active {
+    box-shadow: 0 2px 0 #3db8b0;
+}
+
+#start-stop:hover {
+    background-color: #5eddd4;
+}
+
+#reset {
+    background-color: #ff6b6b;
+    color: white;
+    box-shadow: 0 4px 0 #e04e4e;
+}
+
+#reset:active {
+    box-shadow: 0 2px 0 #e04e4e;
+}
+
+#reset:hover {
+    background-color: #ff7f7f;
+}
+
+/* Animation for the timer */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.timer-running .time {
+    animation: pulse 1s infinite;
+    color: #ff6b6b;
+}
+
+/* Responsive design */
+@media (max-width: 500px) {
+    .time {
+        font-size: 1.3em;
+    }
+
+    .container {
+        padding: 15px;
+        width: 100%;
+        max-width: 100vw;
+    }
+
+    button {
+        padding: 8px 16px;
+        font-size: 1em;
+    }
+}
