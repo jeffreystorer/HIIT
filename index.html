@@ -32,6 +32,8 @@
         </div>
 
         <div class="settings">
+
+            <!-- Sets -->
             <div class="setting-row">
                 <label>Sets</label>
                 <div class="stepper">
@@ -40,6 +42,8 @@
                     <button class="step-up" data-target="sets">+</button>
                 </div>
             </div>
+
+            <!-- Reps -->
             <div class="setting-row">
                 <label>Reps</label>
                 <div class="stepper">
@@ -48,30 +52,52 @@
                     <button class="step-up" data-target="reps">+</button>
                 </div>
             </div>
+
+            <!-- Hold -->
             <div class="setting-row">
-                <label>Hold (sec)</label>
-                <div class="stepper">
-                    <button class="step-down" data-target="hold">-</button>
-                    <input type="number" id="hold" min="1" max="30" value="10" readonly>
-                    <button class="step-up" data-target="hold">+</button>
+                <label>Hold</label>
+                <div class="stepper mmss-stepper">
+                    <button class="step-down" data-target="hold-min">-</button>
+                    <input type="number" id="hold-min" min="0" max="59" value="0" readonly>
+                    <button class="step-up" data-target="hold-min">+</button>
+                    <span class="mmss-sep">m:</span>
+                    <button class="step-down" data-target="hold-sec">-</button>
+                    <input type="number" id="hold-sec" min="0" max="59" value="10" readonly>
+                    <button class="step-up" data-target="hold-sec">+</button>
+                    <span class="mmss-sep">s</span>
                 </div>
             </div>
+
+            <!-- Rest -->
             <div class="setting-row">
-                <label>Rest (sec)</label>
-                <div class="stepper">
-                    <button class="step-down" data-target="rest">-</button>
-                    <input type="number" id="rest" min="0" max="30" value="4" readonly>
-                    <button class="step-up" data-target="rest">+</button>
+                <label>Rest</label>
+                <div class="stepper mmss-stepper">
+                    <button class="step-down" data-target="rest-min">-</button>
+                    <input type="number" id="rest-min" min="0" max="59" value="0" readonly>
+                    <button class="step-up" data-target="rest-min">+</button>
+                    <span class="mmss-sep">m:</span>
+                    <button class="step-down" data-target="rest-sec">-</button>
+                    <input type="number" id="rest-sec" min="0" max="59" value="4" readonly>
+                    <button class="step-up" data-target="rest-sec">+</button>
+                    <span class="mmss-sep">s</span>
                 </div>
             </div>
+
+            <!-- Recover -->
             <div class="setting-row">
-                <label>Recover (sec)</label>
-                <div class="stepper">
-                    <button class="step-down" data-target="recover">-</button>
-                    <input type="number" id="recover" min="0" max="60" value="30" readonly>
-                    <button class="step-up" data-target="recover">+</button>
+                <label>Recover</label>
+                <div class="stepper mmss-stepper">
+                    <button class="step-down" data-target="recover-min">-</button>
+                    <input type="number" id="recover-min" min="0" max="59" value="0" readonly>
+                    <button class="step-up" data-target="recover-min">+</button>
+                    <span class="mmss-sep">m:</span>
+                    <button class="step-down" data-target="recover-sec">-</button>
+                    <input type="number" id="recover-sec" min="0" max="59" value="30" readonly>
+                    <button class="step-up" data-target="recover-sec">+</button>
+                    <span class="mmss-sep">s</span>
                 </div>
             </div>
+
         </div>
 
         <button id="set-default" class="set-default-btn">Set as Default</button>

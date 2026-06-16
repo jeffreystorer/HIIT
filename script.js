@@ -8,28 +8,48 @@ document.addEventListener('DOMContentLoaded', function() {
     const container = document.querySelector('.container');
     const progressBar = document.querySelector('.progress-bar');
 
-    const inputs = {
+    // Simple integer inputs
+    const intInputs = {
         sets: document.getElementById('sets'),
-        reps: document.getElementById('reps'),
-        hold: document.getElementById('hold'),
-        rest: document.getElementById('rest'),
-        recover: document.getElementById('recover')
+        reps: document.getElementById('reps')
     };
-
-    const limits = {
+    const intLimits = {
         sets: { min: 1, max: 10 },
-        reps: { min: 1, max: 20 },
-        hold: { min: 1, max: 30 },
-        rest: { min: 0, max: 30 },
-        recover: { min: 0, max: 60 }
+        reps: { min: 1, max: 20 }
     };
 
+    // MM:SS inputs — each has a -min, -sec pair
+    // totalSeconds() helpers are defined per field
+    const mmssFields = ['hold', 'rest', 'recover'];
+    const mmssInputs = {};
+    mmssFields.forEach(f => {
+        mmssInputs[f] = {
+            min: document.getElementById(f + '-min'),
+            sec: document.getElementById(f + '-sec')
+        };
+    });
+
+    // Min total seconds for each mmss field (hold=1, rest/recover=0)
+    const mmssMinTotal = { hold: 1, rest: 0, recover: 0 };
+    const mmssMaxTotal = 3600; // 60 minutes
+
+    function getMmssTotal(field) {
+        return parseInt(mmssInputs[field].min.value, 10) * 60
+             + parseInt(mmssInputs[field].sec.value, 10);
+    }
+
+    function setMmssTotal(field, totalSec) {
+        totalSec = Math.max(mmssMinTotal[field], Math.min(mmssMaxTotal, totalSec));
+        mmssInputs[field].min.value = Math.floor(totalSec / 60);
+        mmssInputs[field].sec.value = totalSec % 60;
+    }
+
+    // Phase colors and names
     const phaseColors = {
-        hold: '#4caf50',    // green
-        rest: '#ffd166',    // yellow
-        recover: '#42a5f5'  // blue
+        hold: '#4caf50',
+        rest: '#ffd166',
+        recover: '#42a5f5'
     };
-
     const phaseNames = {
         hold: 'Work',
         rest: 'Rest',
@@ -39,94 +59,79 @@ document.addEventListener('DOMContentLoaded', function() {
     // Stepper buttons
     document.querySelectorAll('.stepper button').forEach(btn => {
         btn.addEventListener('click', () => {
-            if (isRunning) return;
+            if (isRunning || isPaused) return;
             const target = btn.dataset.target;
-            const input = inputs[target];
-            const { min, max } = limits[target];
+            const isUp = btn.classList.contains('step-up');
+
+            // MM:SS field?
+            const mmssMatch = target.match(/^(hold|rest|recover)-(min|sec)$/);
+            if (mmssMatch) {
+                const field = mmssMatch[1];
+                const part = mmssMatch[2];
+                let total = getMmssTotal(field);
+                total += isUp ? (part === 'min' ? 60 : 1)
+                              : (part === 'min' ? -60 : -1);
+                setMmssTotal(field, total);
+                if (field === 'hold') updateHoldPreview();
+                return;
+            }
+
+            // Integer field
+            const input = intInputs[target];
+            const { min, max } = intLimits[target];
             let value = parseInt(input.value, 10);
-            if (btn.classList.contains('step-up')) {
-                value = Math.min(max, value + 1);
-            } else {
-                value = Math.max(min, value - 1);
-            }
+            value = isUp ? Math.min(max, value + 1) : Math.max(min, value - 1);
             input.value = value;
-            if (target === 'hold' && !isRunning && !isPaused) {
-                currentDuration = value;
-                timeRemaining = value;
-                updateTimeDisplay();
-            }
         });
     });
 
-    // Audio context
-    let audioContext;
-    let audioInitialized = false;
+    // Audio
+    let audioContext, audioInitialized = false;
 
     function initAudio() {
         if (audioInitialized) return;
         try {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            audioContext = new AudioContext();
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
             audioInitialized = true;
-        } catch (e) {
-            console.error('Error initializing audio:', e);
-        }
+        } catch(e) { console.error('Audio init error:', e); }
     }
 
     function playBeep(type = 'sine', frequency = 800, duration = 200) {
-        if (!audioInitialized) {
-            initAudio();
-            if (!audioInitialized) return;
-        }
+        if (!audioInitialized) { initAudio(); if (!audioInitialized) return; }
         try {
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-
-            oscillator.type = type;
-            oscillator.frequency.value = frequency;
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-
-            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-            gainNode.gain.linearRampToValueAtTime(1, audioContext.currentTime + 0.01);
-            gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + duration / 1000);
-
-            oscillator.start();
-            oscillator.stop(audioContext.currentTime + duration / 1000);
-        } catch (e) {
-            console.error('Error playing sound:', e);
-        }
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.type = type;
+            osc.frequency.value = frequency;
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            gain.gain.setValueAtTime(0, audioContext.currentTime);
+            gain.gain.linearRampToValueAtTime(1, audioContext.currentTime + 0.01);
+            gain.gain.linearRampToValueAtTime(0, audioContext.currentTime + duration / 1000);
+            osc.start();
+            osc.stop(audioContext.currentTime + duration / 1000);
+        } catch(e) { console.error('Beep error:', e); }
     }
 
-    function initAudioOnFirstInteraction() {
-        if (audioContext?.state === 'suspended') {
-            audioContext.resume();
-        } else if (!audioInitialized) {
-            initAudio();
-        }
+    function initAudioOnInteraction() {
+        if (audioContext?.state === 'suspended') audioContext.resume();
+        else if (!audioInitialized) initAudio();
     }
-
-    document.addEventListener('click', initAudioOnFirstInteraction, { once: true });
-    document.addEventListener('keydown', initAudioOnFirstInteraction, { once: true });
+    document.addEventListener('click', initAudioOnInteraction, { once: true });
+    document.addEventListener('keydown', initAudioOnInteraction, { once: true });
     initAudio();
 
     // Timer state
-    let isRunning = false;
-    let isPaused = false;
+    let isRunning = false, isPaused = false;
     let timerInterval;
-
-    let schedule = [];      // array of { type, set, rep, duration }
-    let stepIndex = 0;
-    let timeRemaining = 0;
-    let currentDuration = 0;
+    let schedule = [], stepIndex = 0, timeRemaining = 0, currentDuration = 0;
 
     function buildSchedule() {
-        const sets = parseInt(inputs.sets.value, 10);
-        const reps = parseInt(inputs.reps.value, 10);
-        const hold = parseInt(inputs.hold.value, 10);
-        const rest = parseInt(inputs.rest.value, 10);
-        const recover = parseInt(inputs.recover.value, 10);
-
+        const sets = parseInt(intInputs.sets.value, 10);
+        const reps = parseInt(intInputs.reps.value, 10);
+        const hold = getMmssTotal('hold');
+        const rest = getMmssTotal('rest');
+        const recover = getMmssTotal('recover');
         const seq = [];
         for (let s = 1; s <= sets; s++) {
             for (let r = 1; r <= reps; r++) {
@@ -153,7 +158,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const step = schedule[index];
         currentDuration = step.duration;
         timeRemaining = step.duration;
-
         phaseLabel.textContent = phaseNames[step.type];
         setRepDisplay.textContent = `Set ${step.set} / Rep ${step.rep}`;
         container.style.setProperty('--phase-color', phaseColors[step.type]);
@@ -161,36 +165,33 @@ document.addEventListener('DOMContentLoaded', function() {
         updateTimeDisplay();
     }
 
+    function formatTime(sec) {
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
     function updateTimeDisplay() {
-        const minutes = Math.floor(timeRemaining / 60);
-        const seconds = timeRemaining % 60;
-        timeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        timeDisplay.textContent = formatTime(timeRemaining);
         const progress = ((currentDuration - timeRemaining) / currentDuration) * 100;
         progressBar.style.setProperty('--progress', `${progress}%`);
     }
 
     function tick() {
         timeRemaining--;
-        if (timeRemaining < 0) {
-            advanceStep();
-            return;
-        }
+        if (timeRemaining < 0) { advanceStep(); return; }
         updateTimeDisplay();
     }
 
     function advanceStep() {
         playBeep('sine', 800, 50);
         stepIndex++;
-        if (stepIndex >= schedule.length) {
-            workoutComplete();
-            return;
-        }
+        if (stepIndex >= schedule.length) { workoutComplete(); return; }
         loadStep(stepIndex);
     }
 
     function startTimer() {
         if (!isRunning && !isPaused) {
-            // Fresh start
             schedule = buildSchedule();
             if (schedule.length === 0) return;
             stepIndex = 0;
@@ -198,13 +199,10 @@ document.addEventListener('DOMContentLoaded', function() {
             setInputsDisabled(true);
             container.classList.add('timer-running');
         }
-
         isRunning = true;
         isPaused = false;
         startStopBtn.textContent = 'Pause';
-
         playBeep('sine', 800, 50);
-
         timerInterval = setInterval(tick, 1000);
     }
 
@@ -216,53 +214,53 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function startStopHandler() {
-        if (isRunning) {
-            pauseTimer();
-        } else {
-            startTimer();
-        }
+        if (isRunning) pauseTimer(); else startTimer();
     }
 
-    const defaultStorageKey = 'hiitTimerDefaults';
-
-    const defaults = {
-        sets: 2,
-        reps: 2,
-        hold: 10,
-        rest: 4,
-        recover: 30
-    };
+    // Defaults — stored as total seconds internally
+    const defaultStorageKey = 'hiitTimerDefaultsV2';
+    const hardDefaults = { sets: 2, reps: 2, hold: 10, rest: 4, recover: 30 };
+    let defaults = { ...hardDefaults };
 
     function loadSavedDefaults() {
         try {
             const saved = localStorage.getItem(defaultStorageKey);
             if (saved) {
                 const parsed = JSON.parse(saved);
-                Object.keys(defaults).forEach(key => {
-                    if (typeof parsed[key] === 'number' &&
-                        parsed[key] >= limits[key].min &&
-                        parsed[key] <= limits[key].max) {
-                        defaults[key] = parsed[key];
-                    }
+                ['sets','reps','hold','rest','recover'].forEach(k => {
+                    if (typeof parsed[k] === 'number') defaults[k] = parsed[k];
                 });
             }
-        } catch (e) {
-            console.error('Error loading saved defaults:', e);
-        }
+        } catch(e) { console.error('Load defaults error:', e); }
     }
 
     function saveDefaults() {
-        Object.keys(defaults).forEach(key => {
-            defaults[key] = parseInt(inputs[key].value, 10);
-        });
+        defaults.sets = parseInt(intInputs.sets.value, 10);
+        defaults.reps = parseInt(intInputs.reps.value, 10);
+        defaults.hold = getMmssTotal('hold');
+        defaults.rest = getMmssTotal('rest');
+        defaults.recover = getMmssTotal('recover');
         try {
             localStorage.setItem(defaultStorageKey, JSON.stringify(defaults));
-        } catch (e) {
-            console.error('Error saving defaults:', e);
-        }
+        } catch(e) { console.error('Save defaults error:', e); }
     }
 
-    loadSavedDefaults();
+    function applyDefaults() {
+        intInputs.sets.value = defaults.sets;
+        intInputs.reps.value = defaults.reps;
+        setMmssTotal('hold', defaults.hold);
+        setMmssTotal('rest', defaults.rest);
+        setMmssTotal('recover', defaults.recover);
+    }
+
+    function updateHoldPreview() {
+        if (!isRunning && !isPaused) {
+            currentDuration = getMmssTotal('hold');
+            timeRemaining = currentDuration;
+            timeDisplay.textContent = formatTime(timeRemaining);
+            progressBar.style.setProperty('--progress', '0%');
+        }
+    }
 
     function resetTimer() {
         clearInterval(timerInterval);
@@ -273,50 +271,29 @@ document.addEventListener('DOMContentLoaded', function() {
         container.classList.remove('timer-running');
         setInputsDisabled(false);
         startStopBtn.textContent = 'Start';
-
-        Object.keys(defaults).forEach(key => {
-            inputs[key].value = defaults[key];
-        });
-
-        // Reset display to defaults reflecting current settings (first phase = hold)
-        const hold = parseInt(inputs.hold.value, 10);
-        currentDuration = hold;
-        timeRemaining = hold;
+        applyDefaults();
         phaseLabel.textContent = 'Ready';
         setRepDisplay.textContent = 'Set 1 / Rep 1';
         container.style.setProperty('--phase-color', phaseColors.hold);
         progressBar.style.setProperty('--progress', '0%');
-        updateTimeDisplay();
         progressBar.style.background = '';
+        updateHoldPreview();
     }
 
     function workoutComplete() {
         clearInterval(timerInterval);
         isRunning = false;
         isPaused = false;
+        const alarmInterval = setInterval(() => playBeep('sine', 800, 50), 300);
+        setTimeout(() => clearInterval(alarmInterval), 3000);
 
-        // Play alarm sound
-        const alarmInterval = setInterval(() => {
-            playBeep('sine', 800, 50);
-        }, 300);
-
-        setTimeout(() => {
-            clearInterval(alarmInterval);
-        }, 3000);
-
-        // Visual feedback - flash progress bar
-        let isRed = false;
-        let flashCount = 0;
-
+        let isRed = false, flashCount = 0;
         const flashInterval = setInterval(() => {
             isRed = !isRed;
-            if (isRed) {
-                progressBar.style.background = 'conic-gradient(red 0%, red 100%)';
-            } else {
-                progressBar.style.background = 'conic-gradient(transparent 0%, transparent 100%)';
-            }
+            progressBar.style.background = isRed
+                ? 'conic-gradient(red 0%, red 100%)'
+                : 'conic-gradient(transparent 0%, transparent 100%)';
             flashCount++;
-
             if (flashCount >= 10) {
                 clearInterval(flashInterval);
                 progressBar.style.background = '';
@@ -325,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 500);
     }
 
-    // Event Listeners
+    // Event listeners
     startStopBtn.addEventListener('click', startStopHandler);
     resetBtn.addEventListener('click', resetTimer);
 
@@ -333,30 +310,16 @@ document.addEventListener('DOMContentLoaded', function() {
     setDefaultBtn.addEventListener('click', () => {
         if (isRunning || isPaused) return;
         saveDefaults();
-        const original = setDefaultBtn.textContent;
+        const orig = setDefaultBtn.textContent;
         setDefaultBtn.textContent = 'Saved!';
-        setTimeout(() => {
-            setDefaultBtn.textContent = original;
-        }, 1000);
+        setTimeout(() => { setDefaultBtn.textContent = orig; }, 1000);
     });
 
-    // Update preview circle color when Hold value changes (pre-start)
-    inputs.hold.addEventListener('change', () => {
-        if (!isRunning && !isPaused) {
-            const hold = parseInt(inputs.hold.value, 10);
-            currentDuration = hold;
-            timeRemaining = hold;
-            updateTimeDisplay();
-        }
-    });
-
-    // Initial display
-    resetTimer();
-
-    // Prevent spacebar from scrolling the page when buttons are focused
     document.addEventListener('keydown', function(e) {
-        if (e.code === 'Space' && e.target.tagName === 'BUTTON') {
-            e.preventDefault();
-        }
+        if (e.code === 'Space' && e.target.tagName === 'BUTTON') e.preventDefault();
     });
+
+    // Init
+    loadSavedDefaults();
+    resetTimer();
 });

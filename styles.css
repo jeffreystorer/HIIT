@@ -306,7 +306,7 @@ h1 {
     flex-direction: column;
     gap: 12px;
     width: 100%;
-    max-width: 320px;
+    max-width: 420px;
 }
 
 .setting-row {
@@ -320,22 +320,24 @@ h1 {
     font-weight: bold;
     color: #666;
     font-size: 1em;
+    min-width: 65px;
+    text-align: left;
 }
 
 .stepper {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .stepper input[type="number"] {
-    width: 50px;
+    width: 46px;
     text-align: center;
     font-size: 1.1em;
     font-weight: bold;
     border: 2px solid #c8e6c9;
     border-radius: 10px;
-    padding: 6px 4px;
+    padding: 6px 2px;
     font-family: inherit;
     color: #333;
     background-color: #f9fff9;
@@ -348,10 +350,22 @@ h1 {
     margin: 0;
 }
 
+/* MM:SS layout: [−m] [mm] m [−s] [ss] s [+s] [+m] */
+.mmss-stepper {
+    gap: 4px;
+}
+
+.mmss-sep {
+    font-size: 0.85em;
+    font-weight: bold;
+    color: #999;
+    margin: 0 1px;
+}
+
 .stepper button {
     background-color: #c8e6c9;
     box-shadow: 0 3px 0 #a5d6a7;
-    padding: 8px 14px;
+    padding: 8px 11px;
     font-size: 1em;
     min-width: 20px;
     line-height: 1;
