@@ -43,6 +43,25 @@
                 </div>
             </div>
 
+
+            <!-- Recover -->
+            <div class="setting-row">
+                <label>
+                    Recover
+                    <input type="checkbox" id="recover-enabled" checked>
+                </label>
+                <div class="stepper mmss-stepper" id="recover-stepper">
+                    <button class="step-down" data-target="recover-min">-</button>
+                    <input type="number" id="recover-min" min="0" max="59" value="0" readonly>
+                    <button class="step-up" data-target="recover-min">+</button>
+                    <span class="mmss-sep">m:</span>
+                    <button class="step-down" data-target="recover-sec">-</button>
+                    <input type="number" id="recover-sec" min="0" max="59" value="30" readonly>
+                    <button class="step-up" data-target="recover-sec">+</button>
+                    <span class="mmss-sep">s</span>
+                </div>
+            </div>
+
             <!-- Reps -->
             <div class="setting-row">
                 <label>Reps</label>
@@ -53,25 +72,28 @@
                 </div>
             </div>
 
-            <!-- Hold -->
+            <!-- Work -->
             <div class="setting-row">
-                <label>Hold</label>
+                <label>Work</label>
                 <div class="stepper mmss-stepper">
-                    <button class="step-down" data-target="hold-min">-</button>
-                    <input type="number" id="hold-min" min="0" max="59" value="0" readonly>
-                    <button class="step-up" data-target="hold-min">+</button>
+                    <button class="step-down" data-target="work-min">-</button>
+                    <input type="number" id="work-min" min="0" max="59" value="0" readonly>
+                    <button class="step-up" data-target="work-min">+</button>
                     <span class="mmss-sep">m:</span>
-                    <button class="step-down" data-target="hold-sec">-</button>
-                    <input type="number" id="hold-sec" min="0" max="59" value="10" readonly>
-                    <button class="step-up" data-target="hold-sec">+</button>
+                    <button class="step-down" data-target="work-sec">-</button>
+                    <input type="number" id="work-sec" min="0" max="59" value="10" readonly>
+                    <button class="step-up" data-target="work-sec">+</button>
                     <span class="mmss-sep">s</span>
                 </div>
             </div>
 
             <!-- Rest -->
             <div class="setting-row">
-                <label>Rest</label>
-                <div class="stepper mmss-stepper">
+                <label>
+                    Rest
+                    <input type="checkbox" id="rest-enabled" checked>
+                </label>
+                <div class="stepper mmss-stepper" id="rest-stepper">
                     <button class="step-down" data-target="rest-min">-</button>
                     <input type="number" id="rest-min" min="0" max="59" value="0" readonly>
                     <button class="step-up" data-target="rest-min">+</button>
@@ -79,21 +101,6 @@
                     <button class="step-down" data-target="rest-sec">-</button>
                     <input type="number" id="rest-sec" min="0" max="59" value="4" readonly>
                     <button class="step-up" data-target="rest-sec">+</button>
-                    <span class="mmss-sep">s</span>
-                </div>
-            </div>
-
-            <!-- Recover -->
-            <div class="setting-row">
-                <label>Recover</label>
-                <div class="stepper mmss-stepper">
-                    <button class="step-down" data-target="recover-min">-</button>
-                    <input type="number" id="recover-min" min="0" max="59" value="0" readonly>
-                    <button class="step-up" data-target="recover-min">+</button>
-                    <span class="mmss-sep">m:</span>
-                    <button class="step-down" data-target="recover-sec">-</button>
-                    <input type="number" id="recover-sec" min="0" max="59" value="30" readonly>
-                    <button class="step-up" data-target="recover-sec">+</button>
                     <span class="mmss-sep">s</span>
                 </div>
             </div>

@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // DOM Elements
     const timeDisplay = document.querySelector('.time');
     const phaseLabel = document.querySelector('.phase-label');
     const setRepDisplay = document.querySelector('.set-rep-display');
@@ -8,7 +7,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const container = document.querySelector('.container');
     const progressBar = document.querySelector('.progress-bar');
 
-    // Simple integer inputs
     const intInputs = {
         sets: document.getElementById('sets'),
         reps: document.getElementById('reps')
@@ -18,9 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
         reps: { min: 1, max: 20 }
     };
 
-    // MM:SS inputs — each has a -min, -sec pair
-    // totalSeconds() helpers are defined per field
-    const mmssFields = ['hold', 'rest', 'recover'];
+    const mmssFields = ['work', 'rest', 'recover'];
     const mmssInputs = {};
     mmssFields.forEach(f => {
         mmssInputs[f] = {
@@ -29,9 +25,17 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     });
 
-    // Min total seconds for each mmss field (hold=1, rest/recover=0)
-    const mmssMinTotal = { hold: 1, rest: 0, recover: 0 };
-    const mmssMaxTotal = 3600; // 60 minutes
+    const mmssMinTotal = { work: 1, rest: 0, recover: 0 };
+    const mmssMaxTotal = 3600;
+
+    const checkboxes = {
+        rest: document.getElementById('rest-enabled'),
+        recover: document.getElementById('recover-enabled')
+    };
+    const stepperDivs = {
+        rest: document.getElementById('rest-stepper'),
+        recover: document.getElementById('recover-stepper')
+    };
 
     function getMmssTotal(field) {
         return parseInt(mmssInputs[field].min.value, 10) * 60
@@ -44,14 +48,26 @@ document.addEventListener('DOMContentLoaded', function() {
         mmssInputs[field].sec.value = totalSec % 60;
     }
 
-    // Phase colors and names
+    function applyCheckboxState(field) {
+        const enabled = checkboxes[field].checked;
+        stepperDivs[field].style.display = enabled ? '' : 'none';
+    }
+
+    ['rest', 'recover'].forEach(field => {
+        checkboxes[field].addEventListener('change', () => {
+            if (isRunning || isPaused) return;
+            applyCheckboxState(field);
+        });
+        applyCheckboxState(field);
+    });
+
     const phaseColors = {
-        hold: '#4caf50',
+        work: '#4caf50',
         rest: '#ffd166',
         recover: '#42a5f5'
     };
     const phaseNames = {
-        hold: 'Work',
+        work: 'Work',
         rest: 'Rest',
         recover: 'Recover'
     };
@@ -63,8 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const target = btn.dataset.target;
             const isUp = btn.classList.contains('step-up');
 
-            // MM:SS field?
-            const mmssMatch = target.match(/^(hold|rest|recover)-(min|sec)$/);
+            const mmssMatch = target.match(/^(work|rest|recover)-(min|sec)$/);
             if (mmssMatch) {
                 const field = mmssMatch[1];
                 const part = mmssMatch[2];
@@ -72,11 +87,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 total += isUp ? (part === 'min' ? 60 : 1)
                               : (part === 'min' ? -60 : -1);
                 setMmssTotal(field, total);
-                if (field === 'hold') updateHoldPreview();
+                if (field === 'work') updateWorkPreview();
                 return;
             }
 
-            // Integer field
             const input = intInputs[target];
             const { min, max } = intLimits[target];
             let value = parseInt(input.value, 10);
@@ -129,13 +143,13 @@ document.addEventListener('DOMContentLoaded', function() {
     function buildSchedule() {
         const sets = parseInt(intInputs.sets.value, 10);
         const reps = parseInt(intInputs.reps.value, 10);
-        const hold = getMmssTotal('hold');
-        const rest = getMmssTotal('rest');
-        const recover = getMmssTotal('recover');
+        const work = getMmssTotal('work');
+        const rest = checkboxes.rest.checked ? getMmssTotal('rest') : 0;
+        const recover = checkboxes.recover.checked ? getMmssTotal('recover') : 0;
         const seq = [];
         for (let s = 1; s <= sets; s++) {
             for (let r = 1; r <= reps; r++) {
-                seq.push({ type: 'hold', set: s, rep: r, duration: hold });
+                seq.push({ type: 'work', set: s, rep: r, duration: work });
                 if (r < reps && rest > 0) {
                     seq.push({ type: 'rest', set: s, rep: r, duration: rest });
                 }
@@ -152,6 +166,8 @@ document.addEventListener('DOMContentLoaded', function() {
             el.disabled = disabled;
         });
         document.getElementById('set-default').disabled = disabled;
+        checkboxes.rest.disabled = disabled;
+        checkboxes.recover.disabled = disabled;
     }
 
     function loadStep(index) {
@@ -217,9 +233,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isRunning) pauseTimer(); else startTimer();
     }
 
-    // Defaults — stored as total seconds internally
-    const defaultStorageKey = 'hiitTimerDefaultsV2';
-    const hardDefaults = { sets: 2, reps: 2, hold: 10, rest: 4, recover: 30 };
+    // Defaults
+    const defaultStorageKey = 'hiitTimerDefaultsV3';
+    const hardDefaults = { sets: 2, reps: 2, work: 10, rest: 4, recover: 30, restEnabled: true, recoverEnabled: true };
     let defaults = { ...hardDefaults };
 
     function loadSavedDefaults() {
@@ -227,8 +243,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const saved = localStorage.getItem(defaultStorageKey);
             if (saved) {
                 const parsed = JSON.parse(saved);
-                ['sets','reps','hold','rest','recover'].forEach(k => {
-                    if (typeof parsed[k] === 'number') defaults[k] = parsed[k];
+                Object.keys(defaults).forEach(k => {
+                    if (parsed[k] !== undefined) defaults[k] = parsed[k];
                 });
             }
         } catch(e) { console.error('Load defaults error:', e); }
@@ -237,9 +253,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function saveDefaults() {
         defaults.sets = parseInt(intInputs.sets.value, 10);
         defaults.reps = parseInt(intInputs.reps.value, 10);
-        defaults.hold = getMmssTotal('hold');
+        defaults.work = getMmssTotal('work');
         defaults.rest = getMmssTotal('rest');
         defaults.recover = getMmssTotal('recover');
+        defaults.restEnabled = checkboxes.rest.checked;
+        defaults.recoverEnabled = checkboxes.recover.checked;
         try {
             localStorage.setItem(defaultStorageKey, JSON.stringify(defaults));
         } catch(e) { console.error('Save defaults error:', e); }
@@ -248,14 +266,18 @@ document.addEventListener('DOMContentLoaded', function() {
     function applyDefaults() {
         intInputs.sets.value = defaults.sets;
         intInputs.reps.value = defaults.reps;
-        setMmssTotal('hold', defaults.hold);
+        setMmssTotal('work', defaults.work);
         setMmssTotal('rest', defaults.rest);
         setMmssTotal('recover', defaults.recover);
+        checkboxes.rest.checked = defaults.restEnabled;
+        checkboxes.recover.checked = defaults.recoverEnabled;
+        applyCheckboxState('rest');
+        applyCheckboxState('recover');
     }
 
-    function updateHoldPreview() {
+    function updateWorkPreview() {
         if (!isRunning && !isPaused) {
-            currentDuration = getMmssTotal('hold');
+            currentDuration = getMmssTotal('work');
             timeRemaining = currentDuration;
             timeDisplay.textContent = formatTime(timeRemaining);
             progressBar.style.setProperty('--progress', '0%');
@@ -274,10 +296,10 @@ document.addEventListener('DOMContentLoaded', function() {
         applyDefaults();
         phaseLabel.textContent = 'Ready';
         setRepDisplay.textContent = 'Set 1 / Rep 1';
-        container.style.setProperty('--phase-color', phaseColors.hold);
+        container.style.setProperty('--phase-color', phaseColors.work);
         progressBar.style.setProperty('--progress', '0%');
         progressBar.style.background = '';
-        updateHoldPreview();
+        updateWorkPreview();
     }
 
     function workoutComplete() {
@@ -302,7 +324,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 500);
     }
 
-    // Event listeners
     startStopBtn.addEventListener('click', startStopHandler);
     resetBtn.addEventListener('click', resetTimer);
 
@@ -319,7 +340,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.code === 'Space' && e.target.tagName === 'BUTTON') e.preventDefault();
     });
 
-    // Init
     loadSavedDefaults();
     resetTimer();
 });
