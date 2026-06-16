@@ -1,7 +1,8 @@
 document.addEventListener('DOMContentLoaded', function() {
     const timeDisplay = document.querySelector('.time');
     const phaseLabel = document.querySelector('.phase-label');
-    const setRepDisplay = document.querySelector('.set-rep-display');
+    const setDisplay = document.querySelector('.set-display');
+    const repDisplay = document.querySelector('.rep-display');
     const startStopBtn = document.getElementById('start-stop');
     const resetBtn = document.getElementById('reset');
     const container = document.querySelector('.container');
@@ -175,7 +176,10 @@ document.addEventListener('DOMContentLoaded', function() {
         currentDuration = step.duration;
         timeRemaining = step.duration;
         phaseLabel.textContent = phaseNames[step.type];
-        setRepDisplay.textContent = `Set ${step.set} / Rep ${step.rep}`;
+        const totalSets = parseInt(intInputs.sets.value, 10);
+        const totalReps = parseInt(intInputs.reps.value, 10);
+        setDisplay.textContent = `Set ${step.set} of ${totalSets}`;
+        repDisplay.textContent = `Rep ${step.rep} of ${totalReps}`;
         container.style.setProperty('--phase-color', phaseColors[step.type]);
         progressBar.style.setProperty('--progress', '0%');
         updateTimeDisplay();
@@ -295,7 +299,10 @@ document.addEventListener('DOMContentLoaded', function() {
         startStopBtn.textContent = 'Start';
         applyDefaults();
         phaseLabel.textContent = 'Ready';
-        setRepDisplay.textContent = 'Set 1 / Rep 1';
+        const totalSets = parseInt(intInputs.sets.value, 10);
+        const totalReps = parseInt(intInputs.reps.value, 10);
+        setDisplay.textContent = `Set 1 of ${totalSets}`;
+        repDisplay.textContent = `Rep 1 of ${totalReps}`;
         container.style.setProperty('--phase-color', phaseColors.work);
         progressBar.style.setProperty('--progress', '0%');
         progressBar.style.background = '';
