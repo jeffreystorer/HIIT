@@ -3,6 +3,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const phaseLabel = document.querySelector('.phase-label');
     const setDisplay = document.querySelector('.set-display');
     const repDisplay = document.querySelector('.rep-display');
+    const workoutNameDisplay = document.querySelector('.workout-name-display');
+
+    let activeWorkoutName = '';
     const startStopBtn = document.getElementById('start-stop');
     const resetBtn = document.getElementById('reset');
     const container = document.querySelector('.container');
@@ -298,6 +301,8 @@ document.addEventListener('DOMContentLoaded', function() {
         setInputsDisabled(false);
         startStopBtn.textContent = 'Start';
         applyDefaults();
+        activeWorkoutName = '';
+        workoutNameDisplay.textContent = '';
         phaseLabel.textContent = 'Ready';
         const totalSets = parseInt(intInputs.sets.value, 10);
         const totalReps = parseInt(intInputs.reps.value, 10);
@@ -349,4 +354,259 @@ document.addEventListener('DOMContentLoaded', function() {
 
     loadSavedDefaults();
     resetTimer();
+
+    // ── Workout Library ──────────────────────────────────────────────
+
+    const WORKOUTS_KEY = 'hiitWorkouts';
+    const drawer = document.getElementById('workout-drawer');
+    const overlay = document.getElementById('drawer-overlay');
+    const openLibraryBtn = document.getElementById('open-library');
+    const closeDrawerBtn = document.getElementById('close-drawer');
+    const workoutNameInput = document.getElementById('workout-name');
+    const saveWorkoutBtn = document.getElementById('save-workout');
+    const workoutSearchInput = document.getElementById('workout-search');
+    const workoutList = document.getElementById('workout-list');
+
+    function openDrawer() {
+        drawer.classList.add('open');
+        overlay.classList.add('open');
+        renderWorkoutList();
+        workoutNameInput.focus();
+    }
+
+    function closeDrawer() {
+        drawer.classList.remove('open');
+        overlay.classList.remove('open');
+    }
+
+    openLibraryBtn.addEventListener('click', openDrawer);
+    closeDrawerBtn.addEventListener('click', closeDrawer);
+    overlay.addEventListener('click', () => {
+        if (workoutList.querySelector('.workout-rename-input')) return;
+        closeDrawer();
+    });
+
+    workoutSearchInput.addEventListener('input', renderWorkoutList);
+
+    function loadWorkouts() {
+        try {
+            return JSON.parse(localStorage.getItem(WORKOUTS_KEY) || '[]');
+        } catch(e) { return []; }
+    }
+
+    function saveWorkouts(workouts) {
+        localStorage.setItem(WORKOUTS_KEY, JSON.stringify(workouts));
+    }
+
+    function getCurrentSettings() {
+        return {
+            sets: parseInt(intInputs.sets.value, 10),
+            reps: parseInt(intInputs.reps.value, 10),
+            work: getMmssTotal('work'),
+            rest: getMmssTotal('rest'),
+            recover: getMmssTotal('recover'),
+            restEnabled: checkboxes.rest.checked,
+            recoverEnabled: checkboxes.recover.checked
+        };
+    }
+
+    function applySettings(s) {
+        intInputs.sets.value = s.sets;
+        intInputs.reps.value = s.reps;
+        setMmssTotal('work', s.work);
+        setMmssTotal('rest', s.rest ?? 4);
+        setMmssTotal('recover', s.recover ?? 30);
+        checkboxes.rest.checked = s.restEnabled ?? true;
+        checkboxes.recover.checked = s.recoverEnabled ?? true;
+        applyCheckboxState('rest');
+        applyCheckboxState('recover');
+        updateWorkPreview();
+    }
+
+    function formatSummary(s) {
+        const fmt = sec => {
+            const m = Math.floor(sec / 60), ss = sec % 60;
+            return m > 0 ? `${m}m${ss > 0 ? ss + 's' : ''}` : `${ss}s`;
+        };
+        const parts = [`${s.sets}×${s.reps}`, `Work ${fmt(s.work)}`];
+        if (s.restEnabled && s.rest > 0) parts.push(`Rest ${fmt(s.rest)}`);
+        if (s.recoverEnabled && s.recover > 0) parts.push(`Recover ${fmt(s.recover)}`);
+        return parts.join(' · ');
+    }
+
+    function renderWorkoutList() {
+        const workouts = loadWorkouts();
+        const query = workoutSearchInput.value.trim().toLowerCase();
+        const filtered = query
+            ? workouts.filter(w => w.name.toLowerCase().includes(query))
+            : workouts;
+        const isFiltered = !!query;
+
+        if (filtered.length === 0) {
+            workoutList.innerHTML = `<div class="workout-empty">${query ? 'No workouts match your search.' : 'No saved workouts yet.<br>Set up a workout and hit Save!'}</div>`;
+            return;
+        }
+
+        workoutList.innerHTML = filtered.map((w) => {
+            const realIndex = workouts.indexOf(w);
+            return `
+            <div class="workout-item" data-index="${realIndex}" draggable="${!isFiltered}">
+                <div class="drag-handle ${isFiltered ? 'drag-handle-hidden' : ''}" title="Drag to reorder">⠿</div>
+                <div class="workout-item-info" title="Load ${escHtml(w.name)}">
+                    <div class="workout-item-name">${escHtml(w.name)}</div>
+                    <div class="workout-item-detail">${escHtml(formatSummary(w))}</div>
+                </div>
+                <div class="workout-item-actions">
+                    <button class="workout-action-btn load-btn" data-index="${realIndex}" title="Load">▶</button>
+                    <button class="workout-action-btn rename-btn" data-index="${realIndex}" title="Rename">✏️</button>
+                    <button class="workout-action-btn delete delete-btn" data-index="${realIndex}" title="Delete">🗑️</button>
+                </div>
+            </div>`;
+        }).join('');
+
+        // Load on name click
+        workoutList.querySelectorAll('.workout-item-info').forEach(el => {
+            el.addEventListener('click', () => {
+                const idx = parseInt(el.closest('.workout-item').dataset.index, 10);
+                loadWorkout(idx);
+            });
+        });
+        workoutList.querySelectorAll('.load-btn').forEach(btn => {
+            btn.addEventListener('click', () => loadWorkout(parseInt(btn.dataset.index, 10)));
+        });
+        workoutList.querySelectorAll('.rename-btn').forEach(btn => {
+            btn.addEventListener('click', () => startRename(parseInt(btn.dataset.index, 10)));
+        });
+        workoutList.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', () => deleteWorkout(parseInt(btn.dataset.index, 10)));
+        });
+
+        if (!isFiltered) initDragAndDrop();
+    }
+
+    function escHtml(str) {
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function initDragAndDrop() {
+        const items = [...workoutList.querySelectorAll('.workout-item[draggable="true"]')];
+        let dragSrc = null;
+
+        items.forEach(item => {
+            item.addEventListener('dragstart', e => {
+                dragSrc = item;
+                e.dataTransfer.effectAllowed = 'move';
+                // Slight delay so the drag image renders before we style the source
+                setTimeout(() => item.classList.add('dragging'), 0);
+            });
+
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+                workoutList.querySelectorAll('.workout-item').forEach(i => i.classList.remove('drag-over'));
+                dragSrc = null;
+            });
+
+            item.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (item !== dragSrc) {
+                    workoutList.querySelectorAll('.workout-item').forEach(i => i.classList.remove('drag-over'));
+                    item.classList.add('drag-over');
+                }
+            });
+
+            item.addEventListener('dragleave', () => {
+                item.classList.remove('drag-over');
+            });
+
+            item.addEventListener('drop', e => {
+                e.preventDefault();
+                if (!dragSrc || dragSrc === item) return;
+                item.classList.remove('drag-over');
+
+                const fromIndex = parseInt(dragSrc.dataset.index, 10);
+                const toIndex = parseInt(item.dataset.index, 10);
+                const workouts = loadWorkouts();
+                const [moved] = workouts.splice(fromIndex, 1);
+                workouts.splice(toIndex, 0, moved);
+                saveWorkouts(workouts);
+                renderWorkoutList();
+            });
+        });
+    }
+
+    saveWorkoutBtn.addEventListener('click', () => {
+        const name = workoutNameInput.value.trim();
+        if (!name) { workoutNameInput.focus(); return; }
+        const workouts = loadWorkouts();
+        workouts.unshift({ name, ...getCurrentSettings(), savedAt: Date.now() });
+        saveWorkouts(workouts);
+        workoutNameInput.value = '';
+        renderWorkoutList();
+    });
+
+    function loadWorkout(index) {
+        const workouts = loadWorkouts();
+        if (!workouts[index]) return;
+        applySettings(workouts[index]);
+        activeWorkoutName = workouts[index].name;
+        workoutNameDisplay.textContent = activeWorkoutName;
+        closeDrawer();
+    }
+
+    function deleteWorkout(index) {
+        const workouts = loadWorkouts();
+        if (!workouts[index]) return;
+        if (!confirm(`Delete "${workouts[index].name}"?`)) return;
+        workouts.splice(index, 1);
+        saveWorkouts(workouts);
+        renderWorkoutList();
+    }
+
+    function startRename(index) {
+        const workouts = loadWorkouts();
+        if (!workouts[index]) return;
+        const item = workoutList.querySelector(`.workout-item[data-index="${index}"]`);
+        if (!item) return;
+        const nameDiv = item.querySelector('.workout-item-name');
+        const currentName = workouts[index].name;
+        nameDiv.innerHTML = `<input class="workout-rename-input" value="${escHtml(currentName)}" maxlength="40">`;
+        const input = nameDiv.querySelector('input');
+        input.focus();
+        input.select();
+
+        function commitRename() {
+            cleanup();
+            const newName = input.value.trim();
+            if (newName) workouts[index].name = newName;
+            saveWorkouts(workouts);
+            renderWorkoutList();
+        }
+
+        function cancelRename() {
+            cleanup();
+            renderWorkoutList();
+        }
+
+        function onDocMouseDown(e) {
+            if (!input.contains(e.target)) commitRename();
+        }
+
+        function cleanup() {
+            document.removeEventListener('mousedown', onDocMouseDown);
+            input.removeEventListener('keydown', onKeyDown);
+        }
+
+        function onKeyDown(e) {
+            if (e.key === 'Enter') { e.preventDefault(); commitRename(); }
+            if (e.key === 'Escape') { cancelRename(); }
+        }
+
+        // Slight delay so the click that opened rename doesn't immediately commit
+        setTimeout(() => {
+            document.addEventListener('mousedown', onDocMouseDown);
+        }, 0);
+        input.addEventListener('keydown', onKeyDown);
+    }
+
 });

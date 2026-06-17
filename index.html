@@ -20,6 +20,7 @@
                     <div class="progress-content">
                         <div class="status-text">
                             <div class="set-rep-display">
+                                <div class="workout-name-display"></div>
                                 <div class="set-display">Set 1 of 2</div>
                                 <div class="rep-display">Rep 1 of 2</div>
                             </div>
@@ -45,7 +46,6 @@
                     <button class="step-up" data-target="sets">+</button>
                 </div>
             </div>
-
 
             <!-- Recover -->
             <div class="setting-row">
@@ -110,9 +110,36 @@
 
         </div>
 
-        <button id="set-default" class="set-default-btn">Set as Default</button>
+        <div class="bottom-buttons">
+            <button id="set-default" class="set-default-btn">Set as Default</button>
+            <button id="open-library" class="library-btn">📋 Workouts</button>
+        </div>
 
     </div>
+    </div>
+
+    <!-- Drawer overlay -->
+    <div id="drawer-overlay" class="drawer-overlay"></div>
+
+    <!-- Workout library drawer -->
+    <div id="workout-drawer" class="workout-drawer">
+        <div class="drawer-header">
+            <h2>Workouts</h2>
+            <button id="close-drawer" class="close-drawer-btn">✕</button>
+        </div>
+
+        <div class="drawer-save-section">
+            <input type="text" id="workout-name" class="workout-name-input" placeholder="Workout name…" maxlength="40">
+            <button id="save-workout" class="save-workout-btn">Save Current</button>
+        </div>
+
+        <div class="drawer-search">
+            <input type="text" id="workout-search" class="workout-search-input" placeholder="🔍 Search workouts…">
+        </div>
+
+        <div id="workout-list" class="workout-list">
+            <!-- Populated by JS -->
+        </div>
     </div>
 
     <script src="script.js"></script>
