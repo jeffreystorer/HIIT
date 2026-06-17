@@ -100,6 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
             let value = parseInt(input.value, 10);
             value = isUp ? Math.min(max, value + 1) : Math.max(min, value - 1);
             input.value = value;
+            updateCirclePreview();
         });
     });
 
@@ -282,14 +283,21 @@ document.addEventListener('DOMContentLoaded', function() {
         applyCheckboxState('recover');
     }
 
-    function updateWorkPreview() {
+    function updateCirclePreview() {
         if (!isRunning && !isPaused) {
             currentDuration = getMmssTotal('work');
             timeRemaining = currentDuration;
             timeDisplay.textContent = formatTime(timeRemaining);
             progressBar.style.setProperty('--progress', '0%');
+            const totalSets = parseInt(intInputs.sets.value, 10);
+            const totalReps = parseInt(intInputs.reps.value, 10);
+            setDisplay.textContent = `Set 1 of ${totalSets}`;
+            repDisplay.textContent = `Rep 1 of ${totalReps}`;
         }
     }
+
+    // Keep old name as alias so existing calls still work
+    function updateWorkPreview() { updateCirclePreview(); }
 
     function resetTimer() {
         clearInterval(timerInterval);
@@ -304,14 +312,10 @@ document.addEventListener('DOMContentLoaded', function() {
         activeWorkoutName = '';
         workoutNameDisplay.textContent = '';
         phaseLabel.textContent = 'Ready';
-        const totalSets = parseInt(intInputs.sets.value, 10);
-        const totalReps = parseInt(intInputs.reps.value, 10);
-        setDisplay.textContent = `Set 1 of ${totalSets}`;
-        repDisplay.textContent = `Rep 1 of ${totalReps}`;
         container.style.setProperty('--phase-color', phaseColors.work);
         progressBar.style.setProperty('--progress', '0%');
         progressBar.style.background = '';
-        updateWorkPreview();
+        updateCirclePreview();
     }
 
     function workoutComplete() {
@@ -381,10 +385,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     openLibraryBtn.addEventListener('click', openDrawer);
     closeDrawerBtn.addEventListener('click', closeDrawer);
-    overlay.addEventListener('click', () => {
+    function overlayCloseGuard() {
         if (workoutList.querySelector('.workout-rename-input')) return;
         closeDrawer();
-    });
+    }
+    overlay.addEventListener('click', overlayCloseGuard);
+    overlay.addEventListener('touchstart', overlayCloseGuard);
 
     workoutSearchInput.addEventListener('input', renderWorkoutList);
 
@@ -420,7 +426,7 @@ document.addEventListener('DOMContentLoaded', function() {
         checkboxes.recover.checked = s.recoverEnabled ?? true;
         applyCheckboxState('rest');
         applyCheckboxState('recover');
-        updateWorkPreview();
+        updateCirclePreview();
     }
 
     function formatSummary(s) {
@@ -588,12 +594,13 @@ document.addEventListener('DOMContentLoaded', function() {
             renderWorkoutList();
         }
 
-        function onDocMouseDown(e) {
+        function onDocPointerDown(e) {
             if (!input.contains(e.target)) commitRename();
         }
 
         function cleanup() {
-            document.removeEventListener('mousedown', onDocMouseDown);
+            document.removeEventListener('mousedown', onDocPointerDown);
+            document.removeEventListener('touchstart', onDocPointerDown);
             input.removeEventListener('keydown', onKeyDown);
         }
 
@@ -602,10 +609,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.key === 'Escape') { cancelRename(); }
         }
 
-        // Slight delay so the click that opened rename doesn't immediately commit
+        // Slight delay so the tap that opened rename doesn't immediately commit
         setTimeout(() => {
-            document.addEventListener('mousedown', onDocMouseDown);
-        }, 0);
+            document.addEventListener('mousedown', onDocPointerDown);
+            document.addEventListener('touchstart', onDocPointerDown);
+        }, 100);
         input.addEventListener('keydown', onKeyDown);
     }
 

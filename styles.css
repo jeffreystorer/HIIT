@@ -630,6 +630,8 @@ button:hover {
     padding: 8px 14px;
     white-space: nowrap;
     border-radius: 20px;
+    flex-shrink: 0;
+    min-width: fit-content;
 }
 .save-workout-btn:hover { background-color: #5eddd4; }
 .save-workout-btn:active { box-shadow: 0 1px 0 #3db8b0; }
