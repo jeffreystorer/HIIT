@@ -570,8 +570,8 @@ button:hover {
     display: flex;
     flex-direction: column;
     font-family: 'Comic Sans MS', 'Arial Rounded MT', Arial, sans-serif;
-    padding-right: env(safe-area-inset-right);
     box-sizing: border-box;
+    padding-right: 12px;
 }
 .workout-drawer.open {
     transform: translateX(0);

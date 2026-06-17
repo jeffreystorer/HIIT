@@ -581,6 +581,12 @@ document.addEventListener('DOMContentLoaded', function() {
         input.focus();
         input.select();
 
+        // Stop ALL pointer events on the input from reaching the document listener
+        function absorbPointer(e) { e.stopPropagation(); }
+        input.addEventListener('pointerdown', absorbPointer, true);
+        input.addEventListener('mousedown', absorbPointer, true);
+        input.addEventListener('touchstart', absorbPointer, true);
+
         function commitRename() {
             cleanup();
             const newName = input.value.trim();
@@ -594,13 +600,17 @@ document.addEventListener('DOMContentLoaded', function() {
             renderWorkoutList();
         }
 
-        function onPointerDown(e) {
-            if (input.contains(e.target)) return;
+        function onOutsidePointer(e) {
             commitRename();
         }
 
         function cleanup() {
-            document.removeEventListener('pointerdown', onPointerDown, true);
+            document.removeEventListener('pointerdown', onOutsidePointer, true);
+            document.removeEventListener('mousedown', onOutsidePointer, true);
+            document.removeEventListener('touchstart', onOutsidePointer, true);
+            input.removeEventListener('pointerdown', absorbPointer, true);
+            input.removeEventListener('mousedown', absorbPointer, true);
+            input.removeEventListener('touchstart', absorbPointer, true);
             input.removeEventListener('keydown', onKeyDown);
         }
 
@@ -609,10 +619,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.key === 'Escape') { cancelRename(); }
         }
 
-        // Capture phase + 200ms delay so the tap/click opening rename doesn't immediately fire
+        // Delay so the tap/click that triggered startRename has fully resolved
         setTimeout(() => {
-            document.addEventListener('pointerdown', onPointerDown, true);
-        }, 200);
+            document.addEventListener('pointerdown', onOutsidePointer, true);
+            document.addEventListener('mousedown', onOutsidePointer, true);
+            document.addEventListener('touchstart', onOutsidePointer, true);
+        }, 300);
         input.addEventListener('keydown', onKeyDown);
     }
 
