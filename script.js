@@ -385,12 +385,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     openLibraryBtn.addEventListener('click', openDrawer);
     closeDrawerBtn.addEventListener('click', closeDrawer);
-    function overlayCloseGuard() {
-        if (workoutList.querySelector('.workout-rename-input')) return;
-        closeDrawer();
-    }
-    overlay.addEventListener('click', overlayCloseGuard);
-    overlay.addEventListener('pointerdown', overlayCloseGuard);
+    overlay.addEventListener('click', closeDrawer);
+    overlay.addEventListener('pointerdown', closeDrawer);
 
     workoutSearchInput.addEventListener('input', renderWorkoutList);
 
@@ -576,56 +572,36 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!item) return;
         const nameDiv = item.querySelector('.workout-item-name');
         const currentName = workouts[index].name;
-        nameDiv.innerHTML = `<input class="workout-rename-input" value="${escHtml(currentName)}" maxlength="40">`;
-        const input = nameDiv.querySelector('input');
-        input.focus();
-        input.select();
 
-        // Stop ALL pointer events on the input from reaching the document listener
-        function absorbPointer(e) { e.stopPropagation(); }
-        input.addEventListener('pointerdown', absorbPointer, true);
-        input.addEventListener('mousedown', absorbPointer, true);
-        input.addEventListener('touchstart', absorbPointer, true);
+        // Replace name + action buttons with an inline editor row
+        const actionsDiv = item.querySelector('.workout-item-actions');
+        nameDiv.innerHTML = `<input class="workout-rename-input" value="${escHtml(currentName)}" maxlength="40">`;
+        actionsDiv.innerHTML = `
+            <button class="workout-action-btn rename-confirm-btn" title="Save">✓</button>
+            <button class="workout-action-btn rename-cancel-btn" title="Cancel">✕</button>`;
+
+        const input = nameDiv.querySelector('input');
+        const confirmBtn = actionsDiv.querySelector('.rename-confirm-btn');
+        const cancelBtn = actionsDiv.querySelector('.rename-cancel-btn');
+
+        // Move cursor to end without selecting all, so user can edit in place
+        input.focus();
+        const len = input.value.length;
+        input.setSelectionRange(len, len);
 
         function commitRename() {
-            cleanup();
             const newName = input.value.trim();
             if (newName) workouts[index].name = newName;
             saveWorkouts(workouts);
             renderWorkoutList();
         }
 
-        function cancelRename() {
-            cleanup();
-            renderWorkoutList();
-        }
-
-        function onOutsidePointer(e) {
-            commitRename();
-        }
-
-        function cleanup() {
-            document.removeEventListener('pointerdown', onOutsidePointer, true);
-            document.removeEventListener('mousedown', onOutsidePointer, true);
-            document.removeEventListener('touchstart', onOutsidePointer, true);
-            input.removeEventListener('pointerdown', absorbPointer, true);
-            input.removeEventListener('mousedown', absorbPointer, true);
-            input.removeEventListener('touchstart', absorbPointer, true);
-            input.removeEventListener('keydown', onKeyDown);
-        }
-
-        function onKeyDown(e) {
+        confirmBtn.addEventListener('click', commitRename);
+        cancelBtn.addEventListener('click', () => renderWorkoutList());
+        input.addEventListener('keydown', e => {
             if (e.key === 'Enter') { e.preventDefault(); commitRename(); }
-            if (e.key === 'Escape') { cancelRename(); }
-        }
-
-        // Delay so the tap/click that triggered startRename has fully resolved
-        setTimeout(() => {
-            document.addEventListener('pointerdown', onOutsidePointer, true);
-            document.addEventListener('mousedown', onOutsidePointer, true);
-            document.addEventListener('touchstart', onOutsidePointer, true);
-        }, 300);
-        input.addEventListener('keydown', onKeyDown);
+            if (e.key === 'Escape') { renderWorkoutList(); }
+        });
     }
 
 });
