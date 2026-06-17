@@ -390,7 +390,7 @@ document.addEventListener('DOMContentLoaded', function() {
         closeDrawer();
     }
     overlay.addEventListener('click', overlayCloseGuard);
-    overlay.addEventListener('touchstart', overlayCloseGuard);
+    overlay.addEventListener('pointerdown', overlayCloseGuard);
 
     workoutSearchInput.addEventListener('input', renderWorkoutList);
 
@@ -594,13 +594,13 @@ document.addEventListener('DOMContentLoaded', function() {
             renderWorkoutList();
         }
 
-        function onDocPointerDown(e) {
-            if (!input.contains(e.target)) commitRename();
+        function onPointerDown(e) {
+            if (input.contains(e.target)) return;
+            commitRename();
         }
 
         function cleanup() {
-            document.removeEventListener('mousedown', onDocPointerDown);
-            document.removeEventListener('touchstart', onDocPointerDown);
+            document.removeEventListener('pointerdown', onPointerDown, true);
             input.removeEventListener('keydown', onKeyDown);
         }
 
@@ -609,11 +609,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.key === 'Escape') { cancelRename(); }
         }
 
-        // Slight delay so the tap that opened rename doesn't immediately commit
+        // Capture phase + 200ms delay so the tap/click opening rename doesn't immediately fire
         setTimeout(() => {
-            document.addEventListener('mousedown', onDocPointerDown);
-            document.addEventListener('touchstart', onDocPointerDown);
-        }, 100);
+            document.addEventListener('pointerdown', onPointerDown, true);
+        }, 200);
         input.addEventListener('keydown', onKeyDown);
     }
 

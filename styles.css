@@ -570,6 +570,8 @@ button:hover {
     display: flex;
     flex-direction: column;
     font-family: 'Comic Sans MS', 'Arial Rounded MT', Arial, sans-serif;
+    padding-right: env(safe-area-inset-right);
+    box-sizing: border-box;
 }
 .workout-drawer.open {
     transform: translateX(0);
@@ -606,9 +608,11 @@ button:hover {
 .drawer-save-section {
     display: flex;
     gap: 8px;
-    padding: 14px 16px;
+    padding: 14px 16px 14px 16px;
+    padding-right: max(16px, env(safe-area-inset-right));
     border-bottom: 2px solid #f0f0f0;
     flex-shrink: 0;
+    box-sizing: border-box;
 }
 .workout-name-input {
     flex: 1;
