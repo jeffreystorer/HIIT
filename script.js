@@ -386,7 +386,6 @@ document.addEventListener('DOMContentLoaded', function() {
     openLibraryBtn.addEventListener('click', openDrawer);
     closeDrawerBtn.addEventListener('click', closeDrawer);
     overlay.addEventListener('click', closeDrawer);
-    overlay.addEventListener('pointerdown', closeDrawer);
 
     workoutSearchInput.addEventListener('input', renderWorkoutList);
 
