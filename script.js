@@ -451,7 +451,7 @@ document.addEventListener('DOMContentLoaded', function() {
         workoutList.innerHTML = filtered.map((w) => {
             const realIndex = workouts.indexOf(w);
             return `
-            <div class="workout-item" data-index="${realIndex}">
+            <div class="workout-item" data-index="${realIndex}" draggable="${!isFiltered}">
                 <div class="drag-handle ${isFiltered ? 'drag-handle-hidden' : ''}" title="Drag to reorder">⠿</div>
                 <div class="workout-item-info" title="Load ${escHtml(w.name)}">
                     <div class="workout-item-name">${escHtml(w.name)}</div>
