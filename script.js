@@ -186,9 +186,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function prependCountdown(seq) {
         if (!seq.length) return seq;
         return [
-            { type: 'countdown', duration: 1, workoutName: seq[0].workoutName || '', set: seq[0].set, rep: seq[0].rep, totalSets: seq[0].totalSets, totalReps: seq[0].totalReps },
-            { type: 'countdown', duration: 1, workoutName: seq[0].workoutName || '', set: seq[0].set, rep: seq[0].rep, totalSets: seq[0].totalSets, totalReps: seq[0].totalReps },
-            { type: 'countdown', duration: 1, workoutName: seq[0].workoutName || '', set: seq[0].set, rep: seq[0].rep, totalSets: seq[0].totalSets, totalReps: seq[0].totalReps },
+            { type: 'countdown', duration: 3, workoutName: seq[0].workoutName || '', set: seq[0].set, rep: seq[0].rep, totalSets: seq[0].totalSets, totalReps: seq[0].totalReps },
             ...seq
         ];
     }
@@ -237,11 +235,7 @@ document.addEventListener('DOMContentLoaded', function() {
         phaseLabel.textContent = phaseNames[step.type] || step.type;
 
         if (step.type === 'countdown') {
-            const countNum = 3 - (index); // rough — works for prepended steps
-            // Actually count from the start of countdown steps
-            const countdownSteps = schedule.filter((s,i) => i <= index && s.type === 'countdown');
-            const num = 4 - countdownSteps.length;
-            phaseLabel.textContent = String(num);
+            phaseLabel.textContent = '3';
             workoutNameDisplay.textContent = step.workoutName || '';
             setDisplay.textContent = `Set 1 of ${step.totalSets}`;
             repDisplay.textContent = `Rep 1 of ${step.totalReps}`;
@@ -284,10 +278,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function tick() {
-        // Countdown beeps at 3, 2, 1 before phase ends
-        if (timeRemaining === 3) playCountdownBeep();
-        else if (timeRemaining === 2) playCountdownBeep();
-        else if (timeRemaining === 1) playFinalBeep();
+        // During countdown, update the big number each second
+        if (schedule[stepIndex]?.type === 'countdown') {
+            if (timeRemaining > 0 && timeRemaining < currentDuration) {
+                phaseLabel.textContent = String(timeRemaining);
+                speak(String(timeRemaining));
+                playCountdownBeep();
+            }
+        } else {
+            // Countdown beeps at 3, 2, 1 before phase ends
+            if (timeRemaining === 3) playCountdownBeep();
+            else if (timeRemaining === 2) playCountdownBeep();
+            else if (timeRemaining === 1) playFinalBeep();
+        }
 
         timeRemaining--;
         if (timeRemaining < 0) { advanceStep(); return; }
@@ -304,10 +307,7 @@ document.addEventListener('DOMContentLoaded', function() {
         else if (step.type === 'rest') speak('Rest');
         else if (step.type === 'recover') speak('Recover');
         else if (step.type === 'transition') speak('Next: ' + step.workoutName);
-        else if (step.type === 'countdown') {
-            const cdSteps = schedule.filter((s,i) => i <= stepIndex && s.type === 'countdown');
-            speak(String(4 - cdSteps.length));
-        }
+        else if (step.type === 'countdown') speak('3');
         loadStep(stepIndex);
     }
 
