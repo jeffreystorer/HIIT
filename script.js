@@ -68,12 +68,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const phaseColors = {
         work: '#4caf50',
         rest: '#ffd166',
-        recover: '#42a5f5'
+        recover: '#42a5f5',
+        transition: '#b39ddb'
     };
     const phaseNames = {
         work: 'Work',
         rest: 'Rest',
-        recover: 'Recover'
+        recover: 'Recover',
+        transition: 'Get Ready'
     };
 
     // Stepper buttons
@@ -145,24 +147,52 @@ document.addEventListener('DOMContentLoaded', function() {
     let timerInterval;
     let schedule = [], stepIndex = 0, timeRemaining = 0, currentDuration = 0;
 
-    function buildSchedule() {
-        const sets = parseInt(intInputs.sets.value, 10);
-        const reps = parseInt(intInputs.reps.value, 10);
-        const work = getMmssTotal('work');
-        const rest = checkboxes.rest.checked ? getMmssTotal('rest') : 0;
-        const recover = checkboxes.recover.checked ? getMmssTotal('recover') : 0;
+    function buildWorkoutSchedule(w) {
+        // Build phase sequence for a single saved workout object
+        const sets = w.sets;
+        const reps = w.reps;
+        const work = w.work;
+        const rest = w.restEnabled ? (w.rest ?? 0) : 0;
+        const recover = w.recoverEnabled ? (w.recover ?? 0) : 0;
         const seq = [];
         for (let s = 1; s <= sets; s++) {
             for (let r = 1; r <= reps; r++) {
-                seq.push({ type: 'work', set: s, rep: r, duration: work });
+                seq.push({ type: 'work', set: s, rep: r, totalSets: sets, totalReps: reps, workoutName: w.name || '' });
                 if (r < reps && rest > 0) {
-                    seq.push({ type: 'rest', set: s, rep: r, duration: rest });
+                    seq.push({ type: 'rest', set: s, rep: r, totalSets: sets, totalReps: reps, workoutName: w.name || '', duration: rest });
                 }
             }
             if (s < sets && recover > 0) {
-                seq.push({ type: 'recover', set: s, rep: reps, duration: recover });
+                seq.push({ type: 'recover', set: s, rep: reps, totalSets: sets, totalReps: reps, workoutName: w.name || '', duration: recover });
             }
         }
+        // Annotate work/rest/recover duration
+        seq.forEach(step => { if (!step.duration) step.duration = work; });
+        return seq;
+    }
+
+    function buildSchedule() {
+        const w = {
+            sets: parseInt(intInputs.sets.value, 10),
+            reps: parseInt(intInputs.reps.value, 10),
+            work: getMmssTotal('work'),
+            rest: getMmssTotal('rest'),
+            recover: getMmssTotal('recover'),
+            restEnabled: checkboxes.rest.checked,
+            recoverEnabled: checkboxes.recover.checked,
+            name: activeWorkoutName
+        };
+        return buildWorkoutSchedule(w);
+    }
+
+    function buildPlaylistSchedule(workoutObjects, transitionSec) {
+        const seq = [];
+        workoutObjects.forEach((w, i) => {
+            if (i > 0 && transitionSec > 0) {
+                seq.push({ type: 'transition', duration: transitionSec, workoutName: w.name, set: 1, rep: 1, totalSets: w.sets, totalReps: w.reps });
+            }
+            seq.push(...buildWorkoutSchedule(w));
+        });
         return seq;
     }
 
@@ -179,12 +209,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const step = schedule[index];
         currentDuration = step.duration;
         timeRemaining = step.duration;
-        phaseLabel.textContent = phaseNames[step.type];
-        const totalSets = parseInt(intInputs.sets.value, 10);
-        const totalReps = parseInt(intInputs.reps.value, 10);
-        setDisplay.textContent = `Set ${step.set} of ${totalSets}`;
-        repDisplay.textContent = `Rep ${step.rep} of ${totalReps}`;
-        container.style.setProperty('--phase-color', phaseColors[step.type]);
+        phaseLabel.textContent = phaseNames[step.type] || step.type;
+        if (step.type === 'transition') {
+            workoutNameDisplay.textContent = 'Next: ' + step.workoutName;
+            setDisplay.textContent = `Set 1 of ${step.totalSets}`;
+            repDisplay.textContent = `Rep 1 of ${step.totalReps}`;
+        } else {
+            workoutNameDisplay.textContent = step.workoutName || activeWorkoutName;
+            setDisplay.textContent = `Set ${step.set} of ${step.totalSets}`;
+            repDisplay.textContent = `Rep ${step.rep} of ${step.totalReps}`;
+        }
+        container.style.setProperty('--phase-color', phaseColors[step.type] || '#999');
         progressBar.style.setProperty('--progress', '0%');
         updateTimeDisplay();
     }
@@ -214,9 +249,9 @@ document.addEventListener('DOMContentLoaded', function() {
         loadStep(stepIndex);
     }
 
-    function startTimer() {
+    function startTimer(overrideSchedule) {
         if (!isRunning && !isPaused) {
-            schedule = buildSchedule();
+            schedule = overrideSchedule || buildSchedule();
             if (schedule.length === 0) return;
             stepIndex = 0;
             loadStep(0);
@@ -296,7 +331,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Keep old name as alias so existing calls still work
     function updateWorkPreview() { updateCirclePreview(); }
 
     function resetTimer() {
@@ -359,45 +393,68 @@ document.addEventListener('DOMContentLoaded', function() {
     loadSavedDefaults();
     resetTimer();
 
-    // ── Workout Library ──────────────────────────────────────────────
+    // ── Drawer / Tab infrastructure ───────────────────────────────────
 
-    const WORKOUTS_KEY = 'hiitWorkouts';
     const drawer = document.getElementById('workout-drawer');
     const overlay = document.getElementById('drawer-overlay');
     const openLibraryBtn = document.getElementById('open-library');
     const closeDrawerBtn = document.getElementById('close-drawer');
+    const workoutList = document.getElementById('workout-list');
     const workoutNameInput = document.getElementById('workout-name');
     const saveWorkoutBtn = document.getElementById('save-workout');
     const workoutSearchInput = document.getElementById('workout-search');
-    const workoutList = document.getElementById('workout-list');
+    const playlistList = document.getElementById('playlist-list');
+
+    let activeTab = 'workouts';
 
     function openDrawer() {
         drawer.classList.add('open');
         overlay.classList.add('open');
-        renderWorkoutList();
-        workoutNameInput.focus();
+        renderActiveTab();
+        if (activeTab === 'workouts') workoutNameInput.focus();
     }
 
     function closeDrawer() {
         drawer.classList.remove('open');
         overlay.classList.remove('open');
+        closePlaylistEditor();
+    }
+
+    function renderActiveTab() {
+        if (activeTab === 'workouts') renderWorkoutList();
+        else renderPlaylistList();
     }
 
     openLibraryBtn.addEventListener('click', openDrawer);
     closeDrawerBtn.addEventListener('click', closeDrawer);
     overlay.addEventListener('click', closeDrawer);
-
     workoutSearchInput.addEventListener('input', renderWorkoutList);
 
-    function loadWorkouts() {
-        try {
-            return JSON.parse(localStorage.getItem(WORKOUTS_KEY) || '[]');
-        } catch(e) { return []; }
-    }
+    document.querySelectorAll('.drawer-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            activeTab = tab.dataset.tab;
+            document.querySelectorAll('.drawer-tab').forEach(t => t.classList.toggle('active', t === tab));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + activeTab));
+            renderActiveTab();
+        });
+    });
 
-    function saveWorkouts(workouts) {
-        localStorage.setItem(WORKOUTS_KEY, JSON.stringify(workouts));
+    // ── Storage helpers ───────────────────────────────────────────────
+
+    const WORKOUTS_KEY = 'hiitWorkouts';
+    const PLAYLISTS_KEY = 'hiitPlaylists';
+
+    function loadWorkouts() {
+        try { return JSON.parse(localStorage.getItem(WORKOUTS_KEY) || '[]'); } catch(e) { return []; }
     }
+    function saveWorkouts(w) { localStorage.setItem(WORKOUTS_KEY, JSON.stringify(w)); }
+
+    function loadPlaylists() {
+        try { return JSON.parse(localStorage.getItem(PLAYLISTS_KEY) || '[]'); } catch(e) { return []; }
+    }
+    function savePlaylists(p) { localStorage.setItem(PLAYLISTS_KEY, JSON.stringify(p)); }
+
+    // ── Workout helpers ───────────────────────────────────────────────
 
     function getCurrentSettings() {
         return {
@@ -435,20 +492,24 @@ document.addEventListener('DOMContentLoaded', function() {
         return parts.join(' · ');
     }
 
+    function escHtml(str) {
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Workout list rendering ────────────────────────────────────────
+
     function renderWorkoutList() {
         const workouts = loadWorkouts();
         const query = workoutSearchInput.value.trim().toLowerCase();
-        const filtered = query
-            ? workouts.filter(w => w.name.toLowerCase().includes(query))
-            : workouts;
+        const filtered = query ? workouts.filter(w => w.name.toLowerCase().includes(query)) : workouts;
         const isFiltered = !!query;
 
         if (filtered.length === 0) {
-            workoutList.innerHTML = `<div class="workout-empty">${query ? 'No workouts match your search.' : 'No saved workouts yet.<br>Set up a workout and hit Save!'}</div>`;
+            workoutList.innerHTML = `<div class="workout-empty">${query ? 'No workouts match.' : 'No saved workouts yet.<br>Set up a workout and hit Save!'}</div>`;
             return;
         }
 
-        workoutList.innerHTML = filtered.map((w) => {
+        workoutList.innerHTML = filtered.map(w => {
             const realIndex = workouts.indexOf(w);
             return `
             <div class="workout-item" data-index="${realIndex}" draggable="${!isFiltered}">
@@ -466,12 +527,8 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>`;
         }).join('');
 
-        // Load on name click
         workoutList.querySelectorAll('.workout-item-info').forEach(el => {
-            el.addEventListener('click', () => {
-                const idx = parseInt(el.closest('.workout-item').dataset.index, 10);
-                loadWorkout(idx);
-            });
+            el.addEventListener('click', () => loadWorkout(parseInt(el.closest('.workout-item').dataset.index, 10)));
         });
         workoutList.querySelectorAll('.load-btn').forEach(btn => {
             btn.addEventListener('click', () => loadWorkout(parseInt(btn.dataset.index, 10)));
@@ -486,84 +543,11 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.addEventListener('click', () => deleteWorkout(parseInt(btn.dataset.index, 10)));
         });
 
-        if (!isFiltered) initDragAndDrop();
-    }
-
-    function escHtml(str) {
-        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
-    function initDragAndDrop() {
-        const items = [...workoutList.querySelectorAll('.workout-item[draggable="true"]')];
-        if (items.length < 2) return;
-
-        let dragSrc = null;
-        let dragGhost = null;
-        let offsetY = 0;
-        let active = false;
-
-        function getItemAtY(y) {
-            for (const item of items) {
-                const rect = item.getBoundingClientRect();
-                if (y >= rect.top && y <= rect.bottom) return item;
-            }
-            return null;
-        }
-
-        function cleanup() {
-            active = false;
-            items.forEach(i => i.classList.remove('drag-over', 'dragging'));
-            if (dragGhost) { dragGhost.remove(); dragGhost = null; }
-            dragSrc = null;
-        }
-
-        items.forEach(item => {
-            const handle = item.querySelector('.drag-handle');
-            if (!handle) return;
-
-            handle.addEventListener('pointerdown', e => {
-                e.preventDefault();
-                e.stopPropagation();
-                active = true;
-                dragSrc = item;
-                const rect = item.getBoundingClientRect();
-                offsetY = e.clientY - rect.top;
-
-                dragGhost = item.cloneNode(true);
-                dragGhost.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;opacity:0.75;pointer-events:none;z-index:9999;background:white;border:2px solid #4ecdc4;border-radius:4px;box-sizing:border-box;`;
-                document.body.appendChild(dragGhost);
-                item.classList.add('dragging');
-            });
-        });
-
-        // Attach move/up to document so we track pointer anywhere on screen
-        document.addEventListener('pointermove', e => {
-            if (!active || !dragSrc) return;
-            e.preventDefault();
-            dragGhost.style.top = (e.clientY - offsetY) + 'px';
-            const target = getItemAtY(e.clientY);
-            items.forEach(i => i.classList.remove('drag-over'));
-            if (target && target !== dragSrc) target.classList.add('drag-over');
-        }, { passive: false });
-
-        document.addEventListener('pointerup', e => {
-            if (!active || !dragSrc) return;
-            const target = getItemAtY(e.clientY);
-            if (target && target !== dragSrc) {
-                const fromIndex = parseInt(dragSrc.dataset.index, 10);
-                const toIndex = parseInt(target.dataset.index, 10);
-                const workouts = loadWorkouts();
-                const [moved] = workouts.splice(fromIndex, 1);
-                workouts.splice(toIndex, 0, moved);
-                saveWorkouts(workouts);
-            }
-            cleanup();
-            renderWorkoutList();
-        });
-
-        document.addEventListener('pointercancel', () => {
-            if (!active) return;
-            cleanup();
+        if (!isFiltered) initDragAndDrop(workoutList, (fromIndex, toIndex) => {
+            const workouts = loadWorkouts();
+            const [moved] = workouts.splice(fromIndex, 1);
+            workouts.splice(toIndex, 0, moved);
+            saveWorkouts(workouts);
             renderWorkoutList();
         });
     }
@@ -611,31 +595,23 @@ document.addEventListener('DOMContentLoaded', function() {
         const item = workoutList.querySelector(`.workout-item[data-index="${index}"]`);
         if (!item) return;
         const nameDiv = item.querySelector('.workout-item-name');
-        const currentName = workouts[index].name;
-
-        // Replace name + action buttons with an inline editor row
         const actionsDiv = item.querySelector('.workout-item-actions');
-        nameDiv.innerHTML = `<input class="workout-rename-input" value="${escHtml(currentName)}" maxlength="40">`;
+        nameDiv.innerHTML = `<input class="workout-rename-input" value="${escHtml(workouts[index].name)}" maxlength="40">`;
         actionsDiv.innerHTML = `
             <button class="workout-action-btn rename-confirm-btn" title="Save">✓</button>
             <button class="workout-action-btn rename-cancel-btn" title="Cancel">✕</button>`;
-
         const input = nameDiv.querySelector('input');
         const confirmBtn = actionsDiv.querySelector('.rename-confirm-btn');
         const cancelBtn = actionsDiv.querySelector('.rename-cancel-btn');
-
-        // Move cursor to end without selecting all, so user can edit in place
         input.focus();
         const len = input.value.length;
         input.setSelectionRange(len, len);
-
         function commitRename() {
             const newName = input.value.trim();
             if (newName) workouts[index].name = newName;
             saveWorkouts(workouts);
             renderWorkoutList();
         }
-
         confirmBtn.addEventListener('click', commitRename);
         cancelBtn.addEventListener('click', () => renderWorkoutList());
         input.addEventListener('keydown', e => {
@@ -644,21 +620,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ── Export / Import ──────────────────────────────────────────────
+    // ── Export / Import ───────────────────────────────────────────────
 
     document.getElementById('export-workouts').addEventListener('click', () => {
         const workouts = loadWorkouts();
-        if (workouts.length === 0) {
-            alert('No saved workouts to export.');
-            return;
-        }
-        const json = JSON.stringify(workouts, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
+        if (workouts.length === 0) { alert('No saved workouts to export.'); return; }
+        const blob = new Blob([JSON.stringify(workouts, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = 'hiit-workouts.json';
-        a.click();
+        a.href = url; a.download = 'hiit-workouts.json'; a.click();
         URL.revokeObjectURL(url);
     });
 
@@ -670,21 +640,299 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 const imported = JSON.parse(event.target.result);
                 if (!Array.isArray(imported)) throw new Error('Invalid format');
-                // Validate each entry has at least a name
                 const valid = imported.filter(w => w && typeof w.name === 'string');
                 if (valid.length === 0) throw new Error('No valid workouts found');
-                const existing = loadWorkouts();
-                const merged = [...existing, ...valid];
-                saveWorkouts(merged);
+                saveWorkouts([...loadWorkouts(), ...valid]);
                 renderWorkoutList();
                 alert(`Imported ${valid.length} workout(s).`);
-            } catch(err) {
-                alert('Import failed: ' + err.message);
-            }
-            // Reset so the same file can be imported again if needed
+            } catch(err) { alert('Import failed: ' + err.message); }
             e.target.value = '';
         };
         reader.readAsText(file);
     });
+
+    // ── Playlist export / import ──────────────────────────────────────
+
+    document.getElementById('export-playlists').addEventListener('click', () => {
+        const playlists = loadPlaylists();
+        if (playlists.length === 0) { alert('No saved playlists to export.'); return; }
+        const blob = new Blob([JSON.stringify(playlists, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'hiit-playlists.json'; a.click();
+        URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('import-playlists').addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = event => {
+            try {
+                const imported = JSON.parse(event.target.result);
+                if (!Array.isArray(imported)) throw new Error('Invalid format');
+                const valid = imported.filter(p => p && typeof p.name === 'string' && Array.isArray(p.workoutNames));
+                if (valid.length === 0) throw new Error('No valid playlists found');
+                savePlaylists([...loadPlaylists(), ...valid]);
+                renderPlaylistList();
+                alert(`Imported ${valid.length} playlist(s).`);
+            } catch(err) { alert('Import failed: ' + err.message); }
+            e.target.value = '';
+        };
+        reader.readAsText(file);
+    });
+
+    // ── Playlist list rendering ───────────────────────────────────────
+
+    function renderPlaylistList() {
+        const playlists = loadPlaylists();
+        if (playlists.length === 0) {
+            playlistList.innerHTML = `<div class="workout-empty">No playlists yet.<br>Enter a name above and tap New.</div>`;
+            return;
+        }
+        playlistList.innerHTML = playlists.map((p, i) => {
+            const count = (p.workoutNames || []).length;
+            return `
+            <div class="workout-item" data-index="${i}">
+                <div class="workout-item-info">
+                    <div class="workout-item-name">${escHtml(p.name)}</div>
+                    <div class="workout-item-detail">${count} workout${count !== 1 ? 's' : ''}</div>
+                </div>
+                <div class="workout-item-actions">
+                    <button class="workout-action-btn play-playlist-btn" data-index="${i}" title="Play">▶</button>
+                    <button class="workout-action-btn edit-playlist-btn" data-index="${i}" title="Edit">✏️</button>
+                    <button class="workout-action-btn delete delete-playlist-btn" data-index="${i}" title="Delete">🗑️</button>
+                </div>
+            </div>`;
+        }).join('');
+
+        playlistList.querySelectorAll('.play-playlist-btn').forEach(btn => {
+            btn.addEventListener('click', () => playPlaylist(parseInt(btn.dataset.index, 10)));
+        });
+        playlistList.querySelectorAll('.edit-playlist-btn').forEach(btn => {
+            btn.addEventListener('click', () => openPlaylistEditor(parseInt(btn.dataset.index, 10)));
+        });
+        playlistList.querySelectorAll('.delete-playlist-btn').forEach(btn => {
+            btn.addEventListener('click', () => deletePlaylist(parseInt(btn.dataset.index, 10)));
+        });
+    }
+
+    document.getElementById('save-playlist').addEventListener('click', () => {
+        const name = document.getElementById('playlist-name').value.trim();
+        if (!name) { document.getElementById('playlist-name').focus(); return; }
+        const playlists = loadPlaylists();
+        playlists.push({ name, workoutNames: [] });
+        savePlaylists(playlists);
+        document.getElementById('playlist-name').value = '';
+        renderPlaylistList();
+        // Open the editor immediately so user can add workouts
+        openPlaylistEditor(playlists.length - 1);
+    });
+
+    function deletePlaylist(index) {
+        const playlists = loadPlaylists();
+        if (!playlists[index]) return;
+        if (!confirm(`Delete playlist "${playlists[index].name}"?`)) return;
+        playlists.splice(index, 1);
+        savePlaylists(playlists);
+        renderPlaylistList();
+    }
+
+    function playPlaylist(index) {
+        const playlists = loadPlaylists();
+        const playlist = playlists[index];
+        if (!playlist || !playlist.workoutNames.length) {
+            alert('This playlist has no workouts. Edit it to add some.');
+            return;
+        }
+        const allWorkouts = loadWorkouts();
+        const workoutObjects = playlist.workoutNames.map(name => allWorkouts.find(w => w.name === name)).filter(Boolean);
+        if (workoutObjects.length === 0) {
+            alert('None of the workouts in this playlist exist anymore.');
+            return;
+        }
+        const seq = buildPlaylistSchedule(workoutObjects, 5); // 5-second transitions
+        activeWorkoutName = playlist.name;
+        workoutNameDisplay.textContent = playlist.name;
+        closeDrawer();
+        startTimer(seq);
+    }
+
+    // ── Playlist editor ───────────────────────────────────────────────
+
+    const playlistEditor = document.getElementById('playlist-editor');
+    const playlistEditorOverlay = document.getElementById('playlist-editor-overlay');
+    const playlistEditorTitle = document.getElementById('playlist-editor-title');
+    const playlistWorkoutSearch = document.getElementById('playlist-workout-search');
+    const playlistPool = document.getElementById('playlist-workout-pool');
+    const playlistEntries = document.getElementById('playlist-entries');
+
+    let editingPlaylistIndex = -1;
+
+    function openPlaylistEditor(index) {
+        editingPlaylistIndex = index;
+        const playlists = loadPlaylists();
+        playlistEditorTitle.textContent = playlists[index].name;
+        playlistEditor.classList.add('open');
+        playlistEditorOverlay.classList.add('open');
+        playlistWorkoutSearch.value = '';
+        renderPlaylistEditor();
+    }
+
+    function closePlaylistEditor() {
+        playlistEditor.classList.remove('open');
+        playlistEditorOverlay.classList.remove('open');
+        editingPlaylistIndex = -1;
+    }
+
+    document.getElementById('playlist-editor-back').addEventListener('click', () => {
+        closePlaylistEditor();
+        renderPlaylistList();
+    });
+    document.getElementById('playlist-editor-close').addEventListener('click', () => {
+        closePlaylistEditor();
+        closeDrawer();
+    });
+    playlistEditorOverlay.addEventListener('click', () => {
+        closePlaylistEditor();
+    });
+    playlistWorkoutSearch.addEventListener('input', renderPlaylistEditor);
+
+    function renderPlaylistEditor() {
+        if (editingPlaylistIndex < 0) return;
+        const playlists = loadPlaylists();
+        const playlist = playlists[editingPlaylistIndex];
+        if (!playlist) return;
+        const allWorkouts = loadWorkouts();
+        const query = playlistWorkoutSearch.value.trim().toLowerCase();
+        const filtered = query ? allWorkouts.filter(w => w.name.toLowerCase().includes(query)) : allWorkouts;
+
+        // Pool: all workouts, with + button to add
+        if (filtered.length === 0) {
+            playlistPool.innerHTML = `<div class="workout-empty">No workouts found.</div>`;
+        } else {
+            playlistPool.innerHTML = filtered.map(w => {
+                const inPlaylist = playlist.workoutNames.includes(w.name);
+                return `
+                <div class="workout-item pool-item">
+                    <div class="workout-item-info">
+                        <div class="workout-item-name">${escHtml(w.name)}</div>
+                        <div class="workout-item-detail">${escHtml(formatSummary(w))}</div>
+                    </div>
+                    <div class="workout-item-actions">
+                        <button class="workout-action-btn pool-add-btn ${inPlaylist ? 'pool-added' : ''}" data-name="${escHtml(w.name)}" title="Add to playlist">+</button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            playlistPool.querySelectorAll('.pool-add-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const playlists = loadPlaylists();
+                    playlists[editingPlaylistIndex].workoutNames.push(btn.dataset.name);
+                    savePlaylists(playlists);
+                    renderPlaylistEditor();
+                });
+            });
+        }
+
+        // Entries: current playlist order, with remove + drag reorder
+        if (playlist.workoutNames.length === 0) {
+            playlistEntries.innerHTML = `<div class="workout-empty">Tap + to add workouts above.</div>`;
+        } else {
+            playlistEntries.innerHTML = playlist.workoutNames.map((name, i) => `
+                <div class="workout-item" data-index="${i}" draggable="true">
+                    <div class="drag-handle" title="Drag to reorder">⠿</div>
+                    <div class="workout-item-info">
+                        <div class="workout-item-name">${escHtml(name)}</div>
+                    </div>
+                    <div class="workout-item-actions">
+                        <button class="workout-action-btn delete entry-remove-btn" data-index="${i}" title="Remove">✕</button>
+                    </div>
+                </div>`).join('');
+
+            playlistEntries.querySelectorAll('.entry-remove-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const playlists = loadPlaylists();
+                    playlists[editingPlaylistIndex].workoutNames.splice(parseInt(btn.dataset.index, 10), 1);
+                    savePlaylists(playlists);
+                    renderPlaylistEditor();
+                });
+            });
+
+            initDragAndDrop(playlistEntries, (fromIndex, toIndex) => {
+                const playlists = loadPlaylists();
+                const names = playlists[editingPlaylistIndex].workoutNames;
+                const [moved] = names.splice(fromIndex, 1);
+                names.splice(toIndex, 0, moved);
+                savePlaylists(playlists);
+                renderPlaylistEditor();
+            });
+        }
+    }
+
+    // ── Shared drag-and-drop ──────────────────────────────────────────
+
+    function initDragAndDrop(listEl, onReorder) {
+        const items = [...listEl.querySelectorAll('.workout-item[draggable="true"]')];
+        if (items.length < 2) return;
+
+        let dragSrc = null, dragGhost = null, offsetY = 0, active = false;
+
+        function getItemAtY(y) {
+            for (const item of items) {
+                const rect = item.getBoundingClientRect();
+                if (y >= rect.top && y <= rect.bottom) return item;
+            }
+            return null;
+        }
+
+        function cleanup() {
+            active = false;
+            items.forEach(i => i.classList.remove('drag-over', 'dragging'));
+            if (dragGhost) { dragGhost.remove(); dragGhost = null; }
+            dragSrc = null;
+        }
+
+        items.forEach(item => {
+            const handle = item.querySelector('.drag-handle');
+            if (!handle) return;
+            handle.addEventListener('pointerdown', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                active = true;
+                dragSrc = item;
+                const rect = item.getBoundingClientRect();
+                offsetY = e.clientY - rect.top;
+                dragGhost = item.cloneNode(true);
+                dragGhost.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;opacity:0.75;pointer-events:none;z-index:9999;background:white;border:2px solid #4ecdc4;border-radius:4px;box-sizing:border-box;`;
+                document.body.appendChild(dragGhost);
+                item.classList.add('dragging');
+            });
+        });
+
+        document.addEventListener('pointermove', e => {
+            if (!active || !dragSrc) return;
+            e.preventDefault();
+            dragGhost.style.top = (e.clientY - offsetY) + 'px';
+            const target = getItemAtY(e.clientY);
+            items.forEach(i => i.classList.remove('drag-over'));
+            if (target && target !== dragSrc) target.classList.add('drag-over');
+        }, { passive: false });
+
+        document.addEventListener('pointerup', e => {
+            if (!active || !dragSrc) return;
+            const target = getItemAtY(e.clientY);
+            if (target && target !== dragSrc) {
+                onReorder(parseInt(dragSrc.dataset.index, 10), parseInt(target.dataset.index, 10));
+            } else {
+                cleanup();
+            }
+        });
+
+        document.addEventListener('pointercancel', () => {
+            if (!active) return;
+            cleanup();
+        });
+    }
 
 });

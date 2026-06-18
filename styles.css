@@ -800,3 +800,87 @@ button:hover {
 }
 .export-btn:hover, .import-btn:hover { background-color: #fff9e6; }
 .export-btn:active, .import-btn:active { box-shadow: 0 1px 0 #e6c84c; transform: translateY(2px); }
+
+/* ── Drawer tabs ── */
+.drawer-tabs {
+    display: flex;
+    border-bottom: 2px solid #f0f0f0;
+    flex-shrink: 0;
+}
+.drawer-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 12px 8px;
+    font-size: 1em;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    margin-bottom: -2px;
+}
+.drawer-tab:hover { color: #666; background: none; box-shadow: none; }
+.drawer-tab:active { transform: none; box-shadow: none; }
+.drawer-tab.active { color: #4ecdc4; border-bottom-color: #4ecdc4; }
+
+/* ── Tab panels ── */
+.tab-panel {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+}
+.tab-panel.active { display: flex; }
+
+/* ── Playlist editor (slides over main drawer) ── */
+.playlist-editor {
+    z-index: 2200;
+}
+.playlist-editor .drawer-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.playlist-editor .drawer-header h2 {
+    flex: 1;
+    font-size: 1.1em;
+}
+
+.playlist-entries-header {
+    font-weight: bold;
+    color: #888;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 16px 4px;
+    border-top: 2px solid #f0f0f0;
+    flex-shrink: 0;
+}
+
+.playlist-pool {
+    flex: 0 0 auto;
+    max-height: 35vh;
+    overflow-y: auto;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.playlist-entries {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Pool add button */
+.pool-add-btn {
+    font-size: 1.3em;
+    font-weight: bold;
+    color: #4caf50;
+}
+.pool-add-btn:hover { background: #e8f5e9 !important; }
+.pool-add-btn.pool-added { color: #bbb; }
+
+/* Transition phase color */
+:root { --transition-color: #b39ddb; }

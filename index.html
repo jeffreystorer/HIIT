@@ -123,31 +123,71 @@
 
     <!-- Workout library drawer -->
     <div id="workout-drawer" class="workout-drawer">
+
         <div class="drawer-header">
-            <h2>Workouts</h2>
+            <h2 id="drawer-title">Workouts</h2>
             <button id="close-drawer" class="close-drawer-btn">✕</button>
         </div>
 
-        <div class="drawer-save-section">
-            <input type="text" id="workout-name" class="workout-name-input" placeholder="Workout name…" maxlength="40">
-            <button id="save-workout" class="save-workout-btn">Save Current</button>
+        <!-- Tab bar -->
+        <div class="drawer-tabs">
+            <button class="drawer-tab active" data-tab="workouts">Workouts</button>
+            <button class="drawer-tab" data-tab="playlists">Playlists</button>
         </div>
 
+        <!-- ── Workouts panel ── -->
+        <div id="tab-workouts" class="tab-panel active">
+            <div class="drawer-save-section">
+                <input type="text" id="workout-name" class="workout-name-input" placeholder="Workout name…" maxlength="40">
+                <button id="save-workout" class="save-workout-btn">Save Current</button>
+            </div>
+            <div class="drawer-search">
+                <input type="text" id="workout-search" class="workout-search-input" placeholder="🔍 Search workouts…">
+            </div>
+            <div id="workout-list" class="workout-list"><!-- populated by JS --></div>
+            <div class="drawer-footer">
+                <button id="export-workouts" class="export-btn">⬆ Export</button>
+                <label class="import-btn">
+                    ⬇ Import
+                    <input type="file" id="import-workouts" accept=".json" style="display:none">
+                </label>
+            </div>
+        </div>
+
+        <!-- ── Playlists panel ── -->
+        <div id="tab-playlists" class="tab-panel">
+            <div class="drawer-save-section">
+                <input type="text" id="playlist-name" class="workout-name-input" placeholder="Playlist name…" maxlength="40">
+                <button id="save-playlist" class="save-workout-btn">New</button>
+            </div>
+            <div id="playlist-list" class="workout-list"><!-- populated by JS --></div>
+            <div class="drawer-footer">
+                <button id="export-playlists" class="export-btn">⬆ Export</button>
+                <label class="import-btn">
+                    ⬇ Import
+                    <input type="file" id="import-playlists" accept=".json" style="display:none">
+                </label>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Playlist editor overlay -->
+    <div id="playlist-editor-overlay" class="drawer-overlay"></div>
+
+    <!-- Playlist editor drawer (slides in over workout drawer) -->
+    <div id="playlist-editor" class="workout-drawer playlist-editor">
+        <div class="drawer-header">
+            <button id="playlist-editor-back" class="close-drawer-btn">←</button>
+            <h2 id="playlist-editor-title">Edit Playlist</h2>
+            <button id="playlist-editor-close" class="close-drawer-btn">✕</button>
+        </div>
         <div class="drawer-search">
-            <input type="text" id="workout-search" class="workout-search-input" placeholder="🔍 Search workouts…">
+            <input type="text" id="playlist-workout-search" class="workout-search-input" placeholder="🔍 Search to add workouts…">
         </div>
-
-        <div id="workout-list" class="workout-list">
-            <!-- Populated by JS -->
-        </div>
-
-        <div class="drawer-footer">
-            <button id="export-workouts" class="export-btn">⬆ Export</button>
-            <label class="import-btn">
-                ⬇ Import
-                <input type="file" id="import-workouts" accept=".json" style="display:none">
-            </label>
-        </div>
+        <div id="playlist-workout-pool" class="workout-list playlist-pool"><!-- workouts to add --></div>
+        <div class="playlist-entries-header">Playlist order</div>
+        <div id="playlist-entries" class="workout-list playlist-entries"><!-- current entries --></div>
     </div>
 
     <script src="script.js"></script>
