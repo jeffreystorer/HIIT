@@ -770,3 +770,33 @@ button:hover {
 .rename-confirm-btn:hover { background: #e8f5e9 !important; color: #388e3c !important; }
 .rename-cancel-btn { color: #e04e4e !important; }
 .rename-cancel-btn:hover { background: #ffe0e0 !important; color: #c62828 !important; }
+
+/* ── Drawer footer: export/import ── */
+.drawer-footer {
+    display: flex;
+    gap: 10px;
+    padding: 12px 16px;
+    border-top: 2px solid #f0f0f0;
+    flex-shrink: 0;
+}
+
+.export-btn, .import-btn {
+    flex: 1;
+    text-align: center;
+    background-color: #fff3cd;
+    color: #333;
+    box-shadow: 0 3px 0 #e6c84c;
+    font-size: 0.95em;
+    font-weight: bold;
+    padding: 10px 8px;
+    border-radius: 20px;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+.export-btn:hover, .import-btn:hover { background-color: #fff9e6; }
+.export-btn:active, .import-btn:active { box-shadow: 0 1px 0 #e6c84c; transform: translateY(2px); }

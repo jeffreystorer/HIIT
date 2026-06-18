@@ -631,4 +631,51 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // ── Export / Import ──────────────────────────────────────────────
+
+    document.getElementById('export-workouts').addEventListener('click', () => {
+        const workouts = loadWorkouts();
+        if (workouts.length === 0) {
+            alert('No saved workouts to export.');
+            return;
+        }
+        const json = JSON.stringify(workouts, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'hiit-workouts.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('import-workouts').addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = event => {
+            try {
+                const imported = JSON.parse(event.target.result);
+                if (!Array.isArray(imported)) throw new Error('Invalid format');
+                // Validate each entry has at least a name
+                const valid = imported.filter(w => w && typeof w.name === 'string');
+                if (valid.length === 0) throw new Error('No valid workouts found');
+                const existing = loadWorkouts();
+                // Merge: skip duplicates by name
+                const existingNames = new Set(existing.map(w => w.name));
+                const toAdd = valid.filter(w => !existingNames.has(w.name));
+                const merged = [...existing, ...toAdd];
+                saveWorkouts(merged);
+                renderWorkoutList();
+                const skipped = valid.length - toAdd.length;
+                alert(`Imported ${toAdd.length} workout(s).${skipped > 0 ? ` Skipped ${skipped} duplicate(s).` : ''}`);
+            } catch(err) {
+                alert('Import failed: ' + err.message);
+            }
+            // Reset so the same file can be imported again if needed
+            e.target.value = '';
+        };
+        reader.readAsText(file);
+    });
+
 });
