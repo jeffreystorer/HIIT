@@ -451,7 +451,7 @@ document.addEventListener('DOMContentLoaded', function() {
         workoutList.innerHTML = filtered.map((w) => {
             const realIndex = workouts.indexOf(w);
             return `
-            <div class="workout-item" data-index="${realIndex}" draggable="${!isFiltered}">
+            <div class="workout-item" data-index="${realIndex}">
                 <div class="drag-handle ${isFiltered ? 'drag-handle-hidden' : ''}" title="Drag to reorder">⠿</div>
                 <div class="workout-item-info" title="Load ${escHtml(w.name)}">
                     <div class="workout-item-name">${escHtml(w.name)}</div>
@@ -491,48 +491,71 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function initDragAndDrop() {
         const items = [...workoutList.querySelectorAll('.workout-item[draggable="true"]')];
+        if (items.length < 2) return;
+
         let dragSrc = null;
+        let dragGhost = null;
+        let offsetY = 0;
+
+        function getItemAtY(y) {
+            for (const item of items) {
+                const rect = item.getBoundingClientRect();
+                if (y >= rect.top && y <= rect.bottom) return item;
+            }
+            return null;
+        }
+
+        function cleanup() {
+            items.forEach(i => i.classList.remove('drag-over', 'dragging'));
+            if (dragGhost) { dragGhost.remove(); dragGhost = null; }
+            dragSrc = null;
+        }
 
         items.forEach(item => {
-            item.addEventListener('dragstart', e => {
+            const handle = item.querySelector('.drag-handle');
+            if (!handle) return;
+
+            handle.addEventListener('pointerdown', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                handle.setPointerCapture(e.pointerId);
+
                 dragSrc = item;
-                e.dataTransfer.effectAllowed = 'move';
-                // Slight delay so the drag image renders before we style the source
-                setTimeout(() => item.classList.add('dragging'), 0);
+                const rect = item.getBoundingClientRect();
+                offsetY = e.clientY - rect.top;
+
+                dragGhost = item.cloneNode(true);
+                dragGhost.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;opacity:0.75;pointer-events:none;z-index:9999;background:white;border:2px solid #4ecdc4;border-radius:4px;box-sizing:border-box;`;
+                document.body.appendChild(dragGhost);
+                item.classList.add('dragging');
             });
 
-            item.addEventListener('dragend', () => {
-                item.classList.remove('dragging');
-                workoutList.querySelectorAll('.workout-item').forEach(i => i.classList.remove('drag-over'));
-                dragSrc = null;
-            });
-
-            item.addEventListener('dragover', e => {
+            handle.addEventListener('pointermove', e => {
+                if (!dragSrc) return;
                 e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-                if (item !== dragSrc) {
-                    workoutList.querySelectorAll('.workout-item').forEach(i => i.classList.remove('drag-over'));
-                    item.classList.add('drag-over');
+                dragGhost.style.top = (e.clientY - offsetY) + 'px';
+
+                const target = getItemAtY(e.clientY);
+                items.forEach(i => i.classList.remove('drag-over'));
+                if (target && target !== dragSrc) target.classList.add('drag-over');
+            });
+
+            handle.addEventListener('pointerup', e => {
+                if (!dragSrc) return;
+                const target = getItemAtY(e.clientY);
+                if (target && target !== dragSrc) {
+                    const fromIndex = parseInt(dragSrc.dataset.index, 10);
+                    const toIndex = parseInt(target.dataset.index, 10);
+                    const workouts = loadWorkouts();
+                    const [moved] = workouts.splice(fromIndex, 1);
+                    workouts.splice(toIndex, 0, moved);
+                    saveWorkouts(workouts);
                 }
-            });
-
-            item.addEventListener('dragleave', () => {
-                item.classList.remove('drag-over');
-            });
-
-            item.addEventListener('drop', e => {
-                e.preventDefault();
-                if (!dragSrc || dragSrc === item) return;
-                item.classList.remove('drag-over');
-
-                const fromIndex = parseInt(dragSrc.dataset.index, 10);
-                const toIndex = parseInt(item.dataset.index, 10);
-                const workouts = loadWorkouts();
-                const [moved] = workouts.splice(fromIndex, 1);
-                workouts.splice(toIndex, 0, moved);
-                saveWorkouts(workouts);
+                cleanup();
                 renderWorkoutList();
             });
+
+            handle.addEventListener('pointercancel', cleanup);
         });
     }
 
