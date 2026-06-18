@@ -496,6 +496,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let dragSrc = null;
         let dragGhost = null;
         let offsetY = 0;
+        let active = false;
 
         function getItemAtY(y) {
             for (const item of items) {
@@ -506,6 +507,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         function cleanup() {
+            active = false;
             items.forEach(i => i.classList.remove('drag-over', 'dragging'));
             if (dragGhost) { dragGhost.remove(); dragGhost = null; }
             dragSrc = null;
@@ -518,8 +520,7 @@ document.addEventListener('DOMContentLoaded', function() {
             handle.addEventListener('pointerdown', e => {
                 e.preventDefault();
                 e.stopPropagation();
-                handle.setPointerCapture(e.pointerId);
-
+                active = true;
                 dragSrc = item;
                 const rect = item.getBoundingClientRect();
                 offsetY = e.clientY - rect.top;
@@ -529,33 +530,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.body.appendChild(dragGhost);
                 item.classList.add('dragging');
             });
+        });
 
-            handle.addEventListener('pointermove', e => {
-                if (!dragSrc) return;
-                e.preventDefault();
-                dragGhost.style.top = (e.clientY - offsetY) + 'px';
+        // Attach move/up to document so we track pointer anywhere on screen
+        document.addEventListener('pointermove', e => {
+            if (!active || !dragSrc) return;
+            e.preventDefault();
+            dragGhost.style.top = (e.clientY - offsetY) + 'px';
+            const target = getItemAtY(e.clientY);
+            items.forEach(i => i.classList.remove('drag-over'));
+            if (target && target !== dragSrc) target.classList.add('drag-over');
+        }, { passive: false });
 
-                const target = getItemAtY(e.clientY);
-                items.forEach(i => i.classList.remove('drag-over'));
-                if (target && target !== dragSrc) target.classList.add('drag-over');
-            });
+        document.addEventListener('pointerup', e => {
+            if (!active || !dragSrc) return;
+            const target = getItemAtY(e.clientY);
+            if (target && target !== dragSrc) {
+                const fromIndex = parseInt(dragSrc.dataset.index, 10);
+                const toIndex = parseInt(target.dataset.index, 10);
+                const workouts = loadWorkouts();
+                const [moved] = workouts.splice(fromIndex, 1);
+                workouts.splice(toIndex, 0, moved);
+                saveWorkouts(workouts);
+            }
+            cleanup();
+            renderWorkoutList();
+        });
 
-            handle.addEventListener('pointerup', e => {
-                if (!dragSrc) return;
-                const target = getItemAtY(e.clientY);
-                if (target && target !== dragSrc) {
-                    const fromIndex = parseInt(dragSrc.dataset.index, 10);
-                    const toIndex = parseInt(target.dataset.index, 10);
-                    const workouts = loadWorkouts();
-                    const [moved] = workouts.splice(fromIndex, 1);
-                    workouts.splice(toIndex, 0, moved);
-                    saveWorkouts(workouts);
-                }
-                cleanup();
-                renderWorkoutList();
-            });
-
-            handle.addEventListener('pointercancel', cleanup);
+        document.addEventListener('pointercancel', () => {
+            if (!active) return;
+            cleanup();
+            renderWorkoutList();
         });
     }
 
