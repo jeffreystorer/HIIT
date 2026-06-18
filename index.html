@@ -21,14 +21,18 @@
                         <div class="status-text">
                             <div class="set-rep-display">
                                 <div class="workout-name-display"></div>
+                                <div class="playlist-progress-display"></div>
                                 <div class="set-display">Set 1 of 2</div>
                                 <div class="rep-display">Rep 1 of 2</div>
+                                <div class="next-phase-display"></div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <div class="total-duration-display"></div>
 
         <div class="controls">
             <button id="start-stop">Start</button>
@@ -175,12 +179,26 @@
     <!-- Playlist editor overlay -->
     <div id="playlist-editor-overlay" class="drawer-overlay"></div>
 
-    <!-- Playlist editor drawer (slides in over workout drawer) -->
+    <!-- Playlist editor drawer -->
     <div id="playlist-editor" class="workout-drawer playlist-editor">
         <div class="drawer-header">
             <button id="playlist-editor-back" class="close-drawer-btn">←</button>
             <h2 id="playlist-editor-title">Edit Playlist</h2>
             <button id="playlist-editor-close" class="close-drawer-btn">✕</button>
+        </div>
+        <!-- Transition time setting -->
+        <div class="playlist-transition-row">
+            <label>Transition between workouts</label>
+            <div class="stepper mmss-stepper">
+                <button class="step-down" data-target="transition-min">-</button>
+                <input type="number" id="transition-min" min="0" max="59" value="0" readonly>
+                <button class="step-up" data-target="transition-min">+</button>
+                <span class="mmss-sep">m:</span>
+                <button class="step-down" data-target="transition-sec">-</button>
+                <input type="number" id="transition-sec" min="0" max="59" value="5" readonly>
+                <button class="step-up" data-target="transition-sec">+</button>
+                <span class="mmss-sep">s</span>
+            </div>
         </div>
         <div class="drawer-search">
             <input type="text" id="playlist-workout-search" class="workout-search-input" placeholder="🔍 Search to add workouts…">
