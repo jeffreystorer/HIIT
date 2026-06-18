@@ -459,6 +459,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div class="workout-item-actions">
                     <button class="workout-action-btn load-btn" data-index="${realIndex}" title="Load">▶</button>
+                    <button class="workout-action-btn copy-btn" data-index="${realIndex}" title="Copy">⧉</button>
                     <button class="workout-action-btn rename-btn" data-index="${realIndex}" title="Rename">✏️</button>
                     <button class="workout-action-btn delete delete-btn" data-index="${realIndex}" title="Delete">🗑️</button>
                 </div>
@@ -474,6 +475,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         workoutList.querySelectorAll('.load-btn').forEach(btn => {
             btn.addEventListener('click', () => loadWorkout(parseInt(btn.dataset.index, 10)));
+        });
+        workoutList.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', () => copyWorkout(parseInt(btn.dataset.index, 10)));
         });
         workoutList.querySelectorAll('.rename-btn').forEach(btn => {
             btn.addEventListener('click', () => startRename(parseInt(btn.dataset.index, 10)));
@@ -583,6 +587,15 @@ document.addEventListener('DOMContentLoaded', function() {
         closeDrawer();
     }
 
+    function copyWorkout(index) {
+        const workouts = loadWorkouts();
+        if (!workouts[index]) return;
+        const copy = { ...workouts[index], savedAt: Date.now() };
+        workouts.splice(index + 1, 0, copy);
+        saveWorkouts(workouts);
+        renderWorkoutList();
+    }
+
     function deleteWorkout(index) {
         const workouts = loadWorkouts();
         if (!workouts[index]) return;
@@ -661,14 +674,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const valid = imported.filter(w => w && typeof w.name === 'string');
                 if (valid.length === 0) throw new Error('No valid workouts found');
                 const existing = loadWorkouts();
-                // Merge: skip duplicates by name
-                const existingNames = new Set(existing.map(w => w.name));
-                const toAdd = valid.filter(w => !existingNames.has(w.name));
-                const merged = [...existing, ...toAdd];
+                const merged = [...existing, ...valid];
                 saveWorkouts(merged);
                 renderWorkoutList();
-                const skipped = valid.length - toAdd.length;
-                alert(`Imported ${toAdd.length} workout(s).${skipped > 0 ? ` Skipped ${skipped} duplicate(s).` : ''}`);
+                alert(`Imported ${valid.length} workout(s).`);
             } catch(err) {
                 alert('Import failed: ' + err.message);
             }
