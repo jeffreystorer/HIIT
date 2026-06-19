@@ -473,7 +473,6 @@ document.addEventListener('DOMContentLoaded', function() {
     function openDrawer() {
         drawer.classList.add('open'); overlay.classList.add('open');
         renderActiveTab();
-        if (activeTab === 'workouts') workoutNameInput.focus();
     }
     function closeDrawer() {
         drawer.classList.remove('open'); overlay.classList.remove('open');
