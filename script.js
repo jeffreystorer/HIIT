@@ -272,28 +272,33 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateTimeDisplay() {
-        timeDisplay.textContent = formatTime(timeRemaining);
+        if (schedule[stepIndex]?.type === 'countdown') {
+            timeDisplay.textContent = timeRemaining > 0 ? `00:0${timeRemaining}` : '00:00';
+        } else {
+            timeDisplay.textContent = formatTime(timeRemaining);
+        }
         const progress = ((currentDuration - timeRemaining) / currentDuration) * 100;
         progressBar.style.setProperty('--progress', `${progress}%`);
     }
 
     function tick() {
-        // During countdown, update the big number each second
+        timeRemaining--;
+        if (timeRemaining < 0) { advanceStep(); return; }
+
         if (schedule[stepIndex]?.type === 'countdown') {
-            if (timeRemaining > 0 && timeRemaining < currentDuration) {
+            // timeRemaining is now 2, 1, or 0
+            if (timeRemaining > 0) {
                 phaseLabel.textContent = String(timeRemaining);
                 speak(String(timeRemaining));
                 playCountdownBeep();
             }
+            // at 0 we let advanceStep fire on next tick
         } else {
-            // Countdown beeps at 3, 2, 1 before phase ends
-            if (timeRemaining === 3) playCountdownBeep();
-            else if (timeRemaining === 2) playCountdownBeep();
+            // End-of-phase countdown beeps
+            if (timeRemaining === 3 || timeRemaining === 2) playCountdownBeep();
             else if (timeRemaining === 1) playFinalBeep();
         }
 
-        timeRemaining--;
-        if (timeRemaining < 0) { advanceStep(); return; }
         updateTimeDisplay();
     }
 
