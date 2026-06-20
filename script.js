@@ -287,12 +287,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (schedule[stepIndex]?.type === 'countdown') {
             // timeRemaining is now 2, 1, or 0
-            phaseLabel.textContent = String(timeRemaining);
+            phaseLabel.textContent = timeRemaining > 0 ? String(timeRemaining) : 'Go';
             if (timeRemaining > 0) {
                 speak(String(timeRemaining));
                 playCountdownBeep();
             } else {
-                speak('Zero');
+                speak('Go');
             }
         } else {
             // End-of-phase countdown beeps
