@@ -296,8 +296,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } else {
             // End-of-phase countdown beeps
-            if (timeRemaining === 3 || timeRemaining === 2) playCountdownBeep();
-            else if (timeRemaining === 1) playFinalBeep();
+            if (timeRemaining === 2 || timeRemaining === 1) playCountdownBeep();
+            else if (timeRemaining === 0) playFinalBeep();
         }
 
         updateTimeDisplay();
