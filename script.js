@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ── Settings inputs ───────────────────────────────────────────────
     const intInputs = { sets: document.getElementById('sets'), reps: document.getElementById('reps') };
-    const intLimits = { sets: { min: 1, max: 10 }, reps: { min: 1, max: 20 } };
+    const intLimits = { sets: { min: 1, max: 20 }, reps: { min: 1, max: 20 } };
     const mmssFields = ['work', 'rest', 'recover'];
     const mmssInputs = {};
     mmssFields.forEach(f => {
