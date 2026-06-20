@@ -287,12 +287,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (schedule[stepIndex]?.type === 'countdown') {
             // timeRemaining is now 2, 1, or 0
+            phaseLabel.textContent = String(timeRemaining);
             if (timeRemaining > 0) {
-                phaseLabel.textContent = String(timeRemaining);
                 speak(String(timeRemaining));
                 playCountdownBeep();
             }
-            // at 0 we let advanceStep fire on next tick
         } else {
             // End-of-phase countdown beeps
             if (timeRemaining === 3 || timeRemaining === 2) playCountdownBeep();
