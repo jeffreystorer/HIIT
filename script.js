@@ -291,6 +291,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (timeRemaining > 0) {
                 speak(String(timeRemaining));
                 playCountdownBeep();
+            } else {
+                speak('Zero');
             }
         } else {
             // End-of-phase countdown beeps
