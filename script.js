@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const timeDisplay = document.querySelector('.time');
     const phaseLabel = document.querySelector('.phase-label');
     const setDisplay = document.querySelector('.set-display');
-    const repDisplay = document.querySelector('.rep-label');
+    const repDisplay = document.querySelector('.rep-display');
     const workoutNameDisplay = document.querySelector('.workout-name-display');
     const playlistProgressDisplay = document.querySelector('.playlist-progress-display');
     const nextPhaseDisplay = document.querySelector('.next-phase-display');
