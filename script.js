@@ -429,6 +429,7 @@ document.addEventListener('DOMContentLoaded', function() {
         releaseWakeLock();
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         updateCirclePreview();
+        setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 50);
     }
 
     function workoutComplete() {

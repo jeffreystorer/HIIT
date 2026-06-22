@@ -520,6 +520,7 @@ button:hover {
 /* ── Bottom button row ── */
 .bottom-buttons {
     margin-top: 15px;
+    margin-bottom: 20px;
     display: flex;
     gap: 10px;
     justify-content: center;
