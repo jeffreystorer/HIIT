@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function prependCountdown(seq) {
         if (!seq.length) return seq;
         return [
-            { type: 'countdown', duration: 3, workoutName: seq[0].workoutName || '', set: seq[0].set, rep: seq[0].rep, totalSets: seq[0].totalSets, totalReps: seq[0].totalReps },
+            { type: 'countdown', duration: 5, workoutName: seq[0].workoutName || '', set: seq[0].set, rep: seq[0].rep, totalSets: seq[0].totalSets, totalReps: seq[0].totalReps },
             ...seq
         ];
     }
@@ -254,7 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
         phaseLabel.textContent = phaseNames[step.type] || step.type;
 
         if (step.type === 'countdown') {
-            phaseLabel.textContent = '3';
+            phaseLabel.textContent = String(step.duration);
             workoutNameDisplay.textContent = step.workoutName || '';
             setDisplay.textContent = `Set 1 of ${step.totalSets}`;
             repDisplay.textContent = `Rep 1 of ${step.totalReps}`;
@@ -328,7 +328,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Voice announcement
         if (step.type === 'work') {
             if (step.rep === 1 && step.set > 1) {
-                speakAll('New Set', 'Rep 1');
+                speakAll('New Set', step.workoutName || '', 'Rep 1');
             } else if (step.rep === 1) {
                 speakAll(step.workoutName || '', 'Rep 1');
             } else {
@@ -353,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function() {
             container.classList.add('timer-running');
             requestWakeLock();
             // Start countdown
-            speak('3');
+            speak('5');
             playPhaseStart('countdown');
         }
         isRunning = true;
@@ -610,6 +610,7 @@ document.addEventListener('DOMContentLoaded', function() {
         activeWorkoutName = w[index].name;
         workoutNameDisplay.textContent = activeWorkoutName;
         closeDrawer();
+        startTimer();
     }
     function copyWorkout(index) {
         const w = loadWorkouts(); if (!w[index]) return;
