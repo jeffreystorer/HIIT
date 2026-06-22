@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const timeDisplay = document.querySelector('.time');
     const phaseLabel = document.querySelector('.phase-label');
     const setDisplay = document.querySelector('.set-display');
-    const repDisplay = document.querySelector('.rep-display');
+    const repDisplay = document.querySelector('.rep-label');
     const workoutNameDisplay = document.querySelector('.workout-name-display');
     const playlistProgressDisplay = document.querySelector('.playlist-progress-display');
     const nextPhaseDisplay = document.querySelector('.next-phase-display');
@@ -131,9 +131,28 @@ document.addEventListener('DOMContentLoaded', function() {
     function speak(text) {
         if (!window.speechSynthesis) return;
         window.speechSynthesis.cancel();
-        const utt = new SpeechSynthesisUtterance(text);
-        utt.rate = 1.1; utt.volume = 1;
-        window.speechSynthesis.speak(utt);
+        setTimeout(() => {
+            const utt = new SpeechSynthesisUtterance(text);
+            utt.rate = 1.1; utt.volume = 1;
+            window.speechSynthesis.speak(utt);
+        }, 50);
+    }
+
+    function speakAll(...texts) {
+        if (!window.speechSynthesis) return;
+        window.speechSynthesis.cancel();
+        const filtered = texts.filter(Boolean);
+        if (!filtered.length) return;
+        setTimeout(() => {
+            function sayNext(i) {
+                if (i >= filtered.length) return;
+                const utt = new SpeechSynthesisUtterance(filtered[i]);
+                utt.rate = 1.1; utt.volume = 1;
+                utt.onend = () => sayNext(i + 1);
+                window.speechSynthesis.speak(utt);
+            }
+            sayNext(0);
+        }, 50);
     }
 
     // ── Schedule building ─────────────────────────────────────────────
@@ -286,13 +305,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (timeRemaining < 0) { advanceStep(); return; }
 
         if (schedule[stepIndex]?.type === 'countdown') {
-            // timeRemaining is now 2, 1, or 0
             phaseLabel.textContent = timeRemaining > 0 ? String(timeRemaining) : 'Go';
             if (timeRemaining > 0) {
                 speak(String(timeRemaining));
                 playCountdownBeep();
-            } else {
-                speak('Go');
             }
         } else {
             // End-of-phase countdown beeps
@@ -307,10 +323,18 @@ document.addEventListener('DOMContentLoaded', function() {
         stepIndex++;
         if (stepIndex >= schedule.length) { workoutComplete(); return; }
         const step = schedule[stepIndex];
+        const prev = schedule[stepIndex - 1];
         playPhaseStart(step.type);
         // Voice announcement
-        if (step.type === 'work') speak('Work');
-        else if (step.type === 'rest') speak('Rest');
+        if (step.type === 'work') {
+            if (step.rep === 1 && step.set > 1) {
+                speakAll('New Set', 'Rep 1');
+            } else if (step.rep === 1) {
+                speakAll(step.workoutName || '', 'Rep 1');
+            } else {
+                speak('Rep ' + step.rep);
+            }
+        } else if (step.type === 'rest') speak('Rest');
         else if (step.type === 'recover') speak('Recover');
         else if (step.type === 'transition') speak('Next: ' + step.workoutName);
         else if (step.type === 'countdown') speak('3');
@@ -328,7 +352,7 @@ document.addEventListener('DOMContentLoaded', function() {
             setInputsDisabled(true);
             container.classList.add('timer-running');
             requestWakeLock();
-            // Speak first countdown number
+            // Start countdown
             speak('3');
             playPhaseStart('countdown');
         }
