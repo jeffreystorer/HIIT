@@ -345,6 +345,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!isRunning && !isPaused) {
             let seq = overrideSchedule || buildSchedule();
             if (seq.length === 0) return;
+            // Show the estimate for what is actually about to run (a playlist
+            // never touches the settings form, so it can't come from there)
+            totalDurationDisplay.textContent = `~${formatDuration(totalSeconds(seq))}`;
             seq = prependCountdown(seq);
             schedule = seq;
             stepIndex = 0;
